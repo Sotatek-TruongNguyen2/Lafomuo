@@ -1,0 +1,37 @@
+[features]
+seeds = false
+skip-lint = false
+[programs.localnet]
+solana_real_estate_tokenization = "2auz4bjuCFmQGDwX3NYJ8JyNEVWEcMuM1yt44szhrT2i"
+[programs.devnet]
+solana_real_estate_tokenization = "2auz4bjuCFmQGDwX3NYJ8JyNEVWEcMuM1yt44szhrT2i"
+
+[registry]
+url = "https://api.devnet.solana.com"
+
+[provider]
+cluster = "devnet"
+wallet = "/Users/sotatek/my-solana-wallet/my-keypair.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
+# warp_slot = 1337                                # Warp the ledger to `warp_slot` after starting the validator. 
+# slots_per_epoch = 5                             # Override the number of slots in an epoch.
+# rpc_port = 1337                                 # Set JSON RPC on this port, and the next port for the RPC websocket.
+# limit_ledger_size = 1337                        # Keep this amount of shreds in root slots.
+# ledger = "test-ledger"                          # Set ledger location.
+# gossip_port = 1337                              # Gossip port number for the validator.
+# gossip_host = "127.0.0.1"                       # Gossip DNS name or IP address for the validator to advertise in gossip.
+# faucet_sol = 1337                               # Give the faucet address this much SOL in genesis.
+# faucet_port = 1337                              # Enable the faucet on this port.
+# dynamic_port_range = "1337 - 13337"             # Range to use for dynamically assigned ports.
+# bind_address = "0.0.0.0"                        # IP address to bind the validator ports.
+
+[test.validator]
+url = "https://api.mainnet-beta.solana.com"
+[[test.validator.clone]]
+address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+[[test.validator.clone]]
+address = "PwDiXFxQsGra4sFFTT8r1QWRMd4vfumiWC1jfWNfdYT"
+
