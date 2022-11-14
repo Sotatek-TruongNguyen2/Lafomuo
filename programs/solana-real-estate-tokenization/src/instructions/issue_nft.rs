@@ -170,6 +170,8 @@ fn create_metadata_accounts<'a>(
 }
 
 fn create_master_edition(ctx: &Context<IssueAsset>) -> Result<()> {
+    let v1: Vec<i32> = vec![1, 2, 3];
+
     // master edition info
     let master_edition_infos = vec![
         ctx.accounts.master_edition.to_account_info(),
