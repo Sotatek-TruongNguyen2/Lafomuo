@@ -30,30 +30,10 @@ function getProgramInstance(connection, wallet) {
 
     const program = getProgramInstance(connection, wallet);
 
-    let fst_authority = anchor.web3.Keypair.generate();
-    let sec_authority = anchor.web3.Keypair.generate();
-    let governor = anchor.web3.Keypair.generate();
+    const accounts = await program.account.assetBasket.all();         
+    const p = await program.provider.connection.getAccountInfo(accounts[0].publicKey);
+    console.log(p);
+    const coder = new anchor.BorshAccountsCoder(IDL);
+    console.log("LOL :", await coder.decode("AssetBasket", p.data))
 
-    let sol_treasury = anchor.web3.Keypair.generate();
-    
-    console.log("Sol-treasury: ", sol_treasury.publicKey.toBase58());
-    console.log("Governor: ", governor.publicKey.toBase58());
-
-    const tx = await program.methods.setupPlatform("LANDLORD", new anchor.BN(anchor.web3.LAMPORTS_PER_SOL))
-        .accounts({
-            bigGuardian: program.provider.publicKey,
-            governor: governor.publicKey,
-            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-            systemProgram: anchor.web3.SystemProgram.programId,
-            treasury: sol_treasury.publicKey
-        })
-        .remainingAccounts([
-
-        ])
-        .signers([
-            governor
-        ])
-        .rpc();
-
-    console.log(tx);
 })();

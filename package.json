@@ -8,11 +8,14 @@
     "@metaplex-foundation/js": "^0.17.5",
     "@project-serum/anchor": "^0.25.0",
     "@project-serum/common": "^0.0.1-beta.3",
+    "@saberhq/token-utils": "^1.14.10",
     "@solana/spl-token": "^0.3.6",
     "@solana/web3.js": "1.66.0",
     "bs58": "^5.0.0",
     "buffer-to-uint8array": "^1.1.0",
     "cross-spawn": "^7.0.3",
+    "js-sha3": "^0.8.0",
+    "merkletreejs": "^0.3.3",
     "tweetnacl": "^1.0.3"
   },
   "devDependencies": {

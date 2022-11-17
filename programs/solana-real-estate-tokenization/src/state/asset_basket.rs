@@ -1,9 +1,11 @@
 use anchor_lang::prelude::*;
-// use crate::errors::LandLordErrors;
+use crate::errors::LandLordErrors;
 use crate::constants::*;
+use anchor_spl::token::{Mint};
 
 #[account]
 pub struct AssetBasket {
+    pub asset_tokenize: AssetTokenization,
     pub asset_id: Pubkey,
     pub asset_metadata: Pubkey,
     pub owner: Pubkey,
@@ -13,9 +15,16 @@ pub struct AssetBasket {
     pub bump: u8
 }
 
-impl AssetBasket {
-    pub const LEN: usize = DISCRIMINATOR_LENGTH + PUBLIC_KEY_LENGTH * 4 + U128_LENGTH / 2 + BOOL_LENGTH + U128_LENGTH / U128_LENGTH;
+#[derive(AnchorDeserialize, AnchorSerialize, Clone)]
+pub struct AssetTokenization {
+    pub token_mint: Pubkey,
+    pub tokenized: bool,
+    pub total_supply: u64,
+    pub tokenized_at: i64
+}
 
+impl AssetBasket {
+    pub const LEN: usize = DISCRIMINATOR_LENGTH + PUBLIC_KEY_LENGTH + BOOL_LENGTH + U128_LENGTH +  PUBLIC_KEY_LENGTH * 4 + U128_LENGTH / 2 + BOOL_LENGTH + U128_LENGTH / U128_LENGTH;
 
     pub fn init(
         &mut self, 
@@ -36,5 +45,34 @@ impl AssetBasket {
         self.is_freezed = false;
 
         Ok(self)
+    }
+
+    pub fn fractionalize(
+        &mut self,
+        total_supply: u64,
+        mint: &Account<Mint>
+    ) -> Result<()> {
+        if self.asset_tokenize.tokenized {
+            return Err(LandLordErrors::NFTIsAlreadyFractionalized.into());
+        }
+
+        if mint.decimals == 0 {
+            return Err(LandLordErrors::FractionalTokenZeroDecimals.into());
+        }
+    
+        if mint.supply > 0 {
+            return Err(LandLordErrors::FractionalTokenSupplyNotPure.into());
+        }
+
+        let clock: Clock = Clock::get().unwrap();
+
+        self.asset_tokenize = AssetTokenization {
+            token_mint: mint.key(),
+            tokenized: true,
+            tokenized_at:  clock.unix_timestamp,
+            total_supply
+        };
+
+        Ok(())
     }
 }

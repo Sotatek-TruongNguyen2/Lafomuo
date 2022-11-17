@@ -1,0 +1,23 @@
+[
+    {
+        "address": "secret1ajz54hz8azwuy34qwy9fkjnfcrvf0dzswy0lqq",
+        "amount": "100",
+        "tge": "20",
+        "cliff": "259200",
+        "stage": "1"
+    },
+    {
+        "address": "secret1ldjxljw7v4vk6zhyduywh04hpj0jdwxsmrlatf",
+        "amount": "100",
+        "tge": "20",
+        "cliff": "259200",
+        "stage": "1"
+    },
+    {
+        "address": "secret1fc3fzy78ttp0lwuujw7e52rhspxn8uj52zfyne",
+        "amount": "100",
+        "tge": "20",
+        "cliff": "259200",
+        "stage": "1"
+    }
+]

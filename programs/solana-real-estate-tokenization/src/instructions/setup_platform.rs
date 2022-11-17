@@ -8,8 +8,7 @@ use crate::assertions::{assert_initialized, assert_owned_by, cmp_pubkeys};
 pub fn setup_platform_governor(
     ctx: Context<SetupPlatformGovernor>, 
     symbol: String,
-    minting_protocol_price: u64, 
-    guardians: [Option<Pubkey>; 3]
+    minting_protocol_price: u64
 ) -> Result<()> {
     let mut token_mint: Option<Pubkey> = None; 
 
@@ -35,8 +34,7 @@ pub fn setup_platform_governor(
         token_mint,
         symbol,
         ctx.accounts.treasury.key(),
-        big_guardian.key(),
-        guardians
+        big_guardian.key()
     )?;
 
     Ok(())

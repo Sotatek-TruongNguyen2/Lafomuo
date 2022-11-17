@@ -7,14 +7,19 @@ import {
   getAssociatedTokenAddress,
   TOKEN_PROGRAM_ID,
   MINT_SIZE,
+  createMintToInstruction,
 
 } from "@solana/spl-token";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { Metadata, MasterEditionV2 } from "@metaplex-foundation/mpl-token-metadata";
+import { Metadata } from "@metaplex-foundation/mpl-token-metadata";
 import { expect } from "chai";
+import { bufferToArray } from "./utils";
+import { keccak_256 } from "js-sha3";
+import { MerkleTree } from 'merkletreejs';
+import IDL from '../target/idl/solana_real_estate_tokenization.json';
+import tou8 from 'buffer-to-uint8array';
 
 type Keypair = anchor.web3.Keypair;
-
 
 function getProgramInstance(
   provider: anchor.Provider,
@@ -36,6 +41,26 @@ describe("solana-real-estate-tokenization", () => {
   const program = anchor.workspace.SolanaRealEstateTokenization as Program<SolanaRealEstateTokenization>;
 
   const TOKEN_METADATA_PROGRAM_ID = new anchor.web3.PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+
+  const getTokenTreasury = async (
+    programID: anchor.web3.PublicKey,
+  ): Promise<anchor.web3.PublicKey> => {
+    const [treasuryPubkey, _] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from("spl_token_treasury")],
+      programID
+    );
+
+    return treasuryPubkey;
+  };
+
+  const getDividendClaimedDetails = async (programId: anchor.web3.PublicKey,dividend_distributor: anchor.web3.PublicKey, claimer: anchor.web3.PublicKey): Promise<anchor.web3.PublicKey> => {
+    const [metadataPubkey, _] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from("claim_dividend"), dividend_distributor.toBuffer(), claimer.toBuffer()],
+      programId
+    );
+
+    return metadataPubkey;
+  };
 
   const getMetadata = async (mint: anchor.web3.PublicKey): Promise<anchor.web3.PublicKey> => {
     const [metadataPubkey, _] = await anchor.web3.PublicKey.findProgramAddress(
@@ -75,8 +100,14 @@ describe("solana-real-estate-tokenization", () => {
   let sec_authority: Keypair;
   let governor: Keypair;
   let sol_treasury: Keypair;
+  let dividend_distributor: Keypair;
+  let paymentToken: Keypair;
+  let claimedDividend: Keypair;
 
   it("Is initialized!", async () => {
+    claimedDividend = anchor.web3.Keypair.generate();
+    paymentToken = anchor.web3.Keypair.generate();
+    dividend_distributor = anchor.web3.Keypair.generate();
     sol_treasury = anchor.web3.Keypair.generate();
     governor = anchor.web3.Keypair.generate();
     assetOwner = anchor.web3.Keypair.generate();
@@ -84,10 +115,16 @@ describe("solana-real-estate-tokenization", () => {
     sec_authority = anchor.web3.Keypair.generate();
 
     const mintKey: anchor.web3.Keypair = anchor.web3.Keypair.generate();
-    const nftTokenAccount = await getAssociatedTokenAddress(mintKey.publicKey, assetOwner.publicKey);
+    // const nftTokenAccount = await getAssociatedTokenAddress(mintKey.publicKey, assetOwner.publicKey);
+    const nftTokenAccount = anchor.web3.Keypair.generate();
 
     const signature = await program.provider.connection.requestAirdrop(
       assetOwner.publicKey,
+      LAMPORTS_PER_SOL * 100
+    );
+
+    await program.provider.connection.requestAirdrop(
+      fst_authority.publicKey,
       LAMPORTS_PER_SOL * 100
     );
 
@@ -111,18 +148,12 @@ describe("solana-real-estate-tokenization", () => {
         lamports,
       }),
       createInitializeMintInstruction(mintKey.publicKey, 0, assetOwner.publicKey, assetOwner.publicKey, TOKEN_PROGRAM_ID),
-      createAssociatedTokenAccountInstruction(assetOwner.publicKey, nftTokenAccount, assetOwner.publicKey, mintKey.publicKey)
+      // createAssociatedTokenAccountInstruction(assetOwner.publicKey, nftTokenAccount, assetOwner.publicKey, mintKey.publicKey)
     );
 
     console.log("===== Start initializing Mint and token account ====== ");
 
-    await program.provider.sendAndConfirm(mint_tx, [assetOwner, mintKey]);
-
-    await program.methods.setupPlatform("LANDLORD", new anchor.BN(anchor.web3.LAMPORTS_PER_SOL), [
-      fst_authority.publicKey,
-      sec_authority.publicKey,
-      program.provider.publicKey
-    ])
+    await program.methods.setupPlatform("LANDLORD", new anchor.BN(anchor.web3.LAMPORTS_PER_SOL))
       .accounts({
         bigGuardian: program.provider.publicKey,
         governor: governor.publicKey,
@@ -135,11 +166,10 @@ describe("solana-real-estate-tokenization", () => {
       ])
       .signers([
         governor
-      ])
-      .rpc({
-        preflightCommitment: "processed",
+      ]).rpc({
         commitment: "confirmed"
       });
+
 
     // const governorInfo = await program.account.platformGovernor.fetch(governor.publicKey);
 
@@ -156,7 +186,7 @@ describe("solana-real-estate-tokenization", () => {
       mintKey.publicKey
     );
 
-    await program.methods.issueAsset("https://basc.s3.amazonaws.com/meta/3506.json", "Bored Apes").accounts(
+    const ix = await program.methods.issueAsset("https://basc.s3.amazonaws.com/meta/3506.json", "Bored Apes").accounts(
       {
         bigGuardian: program.provider.publicKey,
         governor: governor.publicKey,
@@ -169,16 +199,19 @@ describe("solana-real-estate-tokenization", () => {
         mint: mintKey.publicKey,
         mintAuthority: assetOwner.publicKey,
         updateAuthority: assetOwner.publicKey,
-        tokenAccount: nftTokenAccount,
+        tokenAccount: nftTokenAccount.publicKey,
         owner: assetOwner.publicKey,
         tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
         assetBasket: assetBasketAddress
       }
     ).signers([
-      assetOwner
-    ]).rpc({
-      commitment: "confirmed"
-    });
+      // nftTokenAccount,
+      // assetOwner
+    ]).instruction();
+
+    mint_tx.add(ix);
+
+    await program.provider.sendAndConfirm(mint_tx, [assetOwner, nftTokenAccount, mintKey]);
 
     const mintAccountInfo = await program.provider.connection.getParsedAccountInfo(mintKey.publicKey);
 
@@ -196,5 +229,159 @@ describe("solana-real-estate-tokenization", () => {
 
     console.log(await program.account.assetBasket.fetch(assetBasketAddress));
     console.log((await program.account.platformGovernor.fetch(governor.publicKey)));
+
+    const tokenAccountInfo = await program.provider.connection.getParsedAccountInfo(nftTokenAccount.publicKey);
+    const tokenAccountInfoData = tokenAccountInfo.value.data as any;
+
+    expect(tokenAccountInfoData.parsed.info.mint).to.be.equals(mintKey.publicKey.toBase58());
+    expect(tokenAccountInfoData.parsed.info.owner).to.be.equals(assetBasketAddress.toBase58());
+    expect(tokenAccountInfoData.parsed.info.tokenAmount.amount).to.be.equals("1");
+
+    // ================= Fractionalize NFT ====================
+
+    const fractionalTokenMint = anchor.web3.Keypair.generate();
+    const fractionalTokenAccount = await getAssociatedTokenAddress(fractionalTokenMint.publicKey, assetOwner.publicKey);
+
+    const fractional_mint_tx = new anchor.web3.Transaction().add(
+      anchor.web3.SystemProgram.createAccount({
+        fromPubkey: assetOwner.publicKey,
+        newAccountPubkey: fractionalTokenMint.publicKey,
+        space: MINT_SIZE,
+        programId: TOKEN_PROGRAM_ID,
+        lamports,
+      }),
+      createInitializeMintInstruction(fractionalTokenMint.publicKey, 8, assetOwner.publicKey, assetOwner.publicKey, TOKEN_PROGRAM_ID),
+      createAssociatedTokenAccountInstruction(assetOwner.publicKey, fractionalTokenAccount, assetOwner.publicKey, fractionalTokenMint.publicKey)
+    );
+
+    await program.provider.sendAndConfirm(fractional_mint_tx, [assetOwner, fractionalTokenMint]);
+
+    await program.methods.fractionalizeAsset(
+      new anchor.BN(10000 * (10 ** 8))
+    ).accounts({
+      assetBasket: assetBasketAddress,
+      bigGuardian: program.provider.publicKey,
+      governor: governor.publicKey,
+      mint: fractionalTokenMint.publicKey,
+      owner: assetOwner.publicKey,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      systemProgram: anchor.web3.SystemProgram.programId,
+      tokenAccount: fractionalTokenAccount,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      mintNft: mintKey.publicKey
+    }).signers([
+      assetOwner
+    ]).rpc();
+
+    const DIVIDEND_AIRDROP = [
+      {
+        dividend_distributor: dividend_distributor.publicKey,
+        claimer: fst_authority.publicKey,
+        amount: new anchor.BN(10 * (10 ** 8))
+      },
+      {
+        dividend_distributor: dividend_distributor.publicKey,
+        claimer: sec_authority.publicKey,
+        amount: new anchor.BN(100 * (10 ** 8))
+      },
+    ];
+
+    let dividendHashes = [];
+
+    for (let dividend of DIVIDEND_AIRDROP) {
+      console.log(dividend.dividend_distributor.toBytes());      
+      console.log(dividend.claimer.toBytes());
+      console.log(dividend.amount.toBuffer("le", 8));
+
+      let bufferOfDividendClaimData = Buffer.concat([
+        // bufferOfDividendClaimData,
+        dividend.dividend_distributor.toBuffer(),
+        dividend.claimer.toBuffer(),
+        dividend.amount.toBuffer("le", 8),
+      ])
+
+      dividendHashes.push(Buffer.from(keccak_256.digest(bufferOfDividendClaimData)).toString("hex"));
+    }
+
+    const tree = new MerkleTree(dividendHashes, keccak_256, { sort: true });
+    const root = bufferToArray(tree.getRoot());
+
+    const tokenTreasuryPDA = await getTokenTreasury(program.programId);
+    const assetOwnerPaymentAccount = await getAssociatedTokenAddress(paymentToken.publicKey, assetOwner.publicKey);
+    const treasuryPaymentAccount = await getAssociatedTokenAddress(paymentToken.publicKey, tokenTreasuryPDA, true);
+    const fstAuthorityPaymentAccount = await getAssociatedTokenAddress(paymentToken.publicKey, fst_authority.publicKey);
+
+    const mint_payment_token_tx= new anchor.web3.Transaction().add(
+      anchor.web3.SystemProgram.createAccount({
+        fromPubkey: assetOwner.publicKey,
+        newAccountPubkey: paymentToken.publicKey,
+        space: MINT_SIZE,
+        programId: TOKEN_PROGRAM_ID,
+        lamports,
+      }),
+      createInitializeMintInstruction(paymentToken.publicKey, 8, assetOwner.publicKey, assetOwner.publicKey, TOKEN_PROGRAM_ID),
+      createAssociatedTokenAccountInstruction(assetOwner.publicKey, treasuryPaymentAccount, tokenTreasuryPDA, paymentToken.publicKey),
+      createAssociatedTokenAccountInstruction(assetOwner.publicKey, assetOwnerPaymentAccount, assetOwner.publicKey, paymentToken.publicKey),
+      createAssociatedTokenAccountInstruction(assetOwner.publicKey, fstAuthorityPaymentAccount, fst_authority.publicKey, paymentToken.publicKey),
+      createMintToInstruction(paymentToken.publicKey, assetOwnerPaymentAccount, assetOwner.publicKey, new anchor.BN(10000 * (10 ** 8)).toNumber())
+    );
+
+    await program.provider.sendAndConfirm(mint_payment_token_tx, [assetOwner, paymentToken]);
+
+    const tx = await program.methods.createDividendCheckpoint(
+      root,
+      new anchor.BN(1000 * (10 ** 8)),
+    ).accounts({
+      dividendDistributor: dividend_distributor.publicKey,
+      governor: governor.publicKey,
+      mint: paymentToken.publicKey,
+      owner: assetOwner.publicKey,
+      ownerTokenAccount: assetOwnerPaymentAccount,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      treasuryTokenAccount: treasuryPaymentAccount,
+      systemProgram: anchor.web3.SystemProgram.programId,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    }).signers([
+      assetOwner,
+      dividend_distributor
+    ]).rpc({
+      commitment: "confirmed"
+    });
+
+    // const tx_details = await program.provider.connection.getTransaction(tx, {
+    //   commitment: "confirmed",
+    // });
+
+    // console.log(tx_details);
+    // const log = tx_details.meta.logMessages[9].split("Program data: ")[1];
+    // const coder = new anchor.BorshEventCoder(IDL);
+
+    // console.log(coder.decode(log));
+
+    const dividendClaimDetails = await getDividendClaimedDetails(program.programId, dividend_distributor.publicKey, fst_authority.publicKey);
+
+    const proofs = tree.getProof(dividendHashes[0]).map(proof => {
+      return bufferToArray(proof.data);
+    });
+
+    // console.log(((await program.provider.connection.getParsedAccountInfo(treasuryPaymentAccount)).value.data as any).parsed);
+
+    await program.methods.claimDividendByCheckpoint(
+      new anchor.BN(10 * (10 ** 8)),
+      proofs
+    ).accounts({
+      claimedDividend: dividendClaimDetails,
+      claimer: fst_authority.publicKey,
+      claimerTokenAccount: fstAuthorityPaymentAccount,
+      dividendDistributor: dividend_distributor.publicKey,
+      treasuryTokenAccountAuthority: tokenTreasuryPDA,
+      treasuryTokenAccount: treasuryPaymentAccount,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      systemProgram: anchor.web3.SystemProgram.programId,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    }).signers([
+      fst_authority
+    ]).rpc();
   });
 });
+

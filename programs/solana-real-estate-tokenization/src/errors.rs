@@ -8,8 +8,6 @@ pub enum LandLordErrors {
     NotAbleToUnpackAccount,
     #[msg("Invalid account owner!")]
     IncorrectOwner,
-    #[msg("Platform has no authorities at all!")]
-    PlatformHasNoAuthorities,
     NotOwnedBySPLProgram,
     TokenAccountMintMismatched,
     TokenAccountOwnerMismatched,
@@ -18,5 +16,17 @@ pub enum LandLordErrors {
     NotEnoughTokens,
     NotEnoughSOL,
     MintingAmountCantBeZero,
-    ImmutableGovernor
+    DividendCheckpointCantBeZero,
+    ImmutableGovernor,
+    GovernorMismatch,
+    NFTOwnerMismatch,
+    NoFreezeAuthoritySet,
+    InvalidAccountData,
+    FractionalTokenZeroDecimals,
+    FractionalTokenSupplyNotPure,
+    NFTIsAlreadyFractionalized,
+    TokenTreasuryPDANotFound,
+    InvalidMerkleProof,
+    DividendAlreadyClaimed,
+    ExceedsTotalDistributionAmount
 }

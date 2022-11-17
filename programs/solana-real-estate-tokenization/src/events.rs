@@ -64,3 +64,21 @@ pub struct AssetIssuance {
     pub metadata: Pubkey,
     pub iat: i64
 }
+
+#[event]
+pub struct DistributionCreated {
+    pub checkpoint_id: u64,
+    pub distributor: Pubkey,
+    pub owner: Pubkey,
+    pub root: String,
+    pub total_distribution_amount: u64
+}
+
+#[event]
+pub struct DividendClaimed {
+    pub checkpoint_id: u64,
+    pub distributor: Pubkey,
+    pub owner: Pubkey,
+    pub total_claimed: u64,
+    pub last_claimed_at: i64
+}

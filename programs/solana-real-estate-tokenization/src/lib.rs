@@ -5,11 +5,12 @@ pub mod errors;
 pub mod events;
 pub mod constants;
 pub mod utils;
+pub mod merkle_proof;
 
 use anchor_lang::prelude::*;
 use instructions::*;
 
-declare_id!("2auz4bjuCFmQGDwX3NYJ8JyNEVWEcMuM1yt44szhrT2i");
+declare_id!("APN3jUjKCMX3nVX7cBFKa3heeJfyBhs1sSJT7bChj96E");
 
 #[program]
 pub mod solana_real_estate_tokenization {
@@ -19,9 +20,8 @@ pub mod solana_real_estate_tokenization {
         ctx: Context<SetupPlatformGovernor>,
         symbol: String,
         minting_protocol_price: u64, 
-        guardians: [Option<Pubkey>; 3]
     ) -> Result<()> {
-        setup_platform_governor(ctx, symbol, minting_protocol_price, guardians)?;
+        setup_platform_governor(ctx, symbol, minting_protocol_price)?;
         Ok(())
     }
 
@@ -33,4 +33,31 @@ pub mod solana_real_estate_tokenization {
         process_issue_asset(ctx, uri, title)?;
         Ok(())
     }
+
+    pub fn fractionalize_asset(
+        ctx: Context<FractionalizeNFT>,
+        total_supply: u64,
+    ) -> Result<()> {
+        process_fractionalize_asset(ctx, total_supply)?;
+        Ok(())
+    }
+
+    pub fn create_dividend_checkpoint(
+        ctx: Context<CreateDividendCheckpoint>,
+        root: [u8; 32],
+        total_distribution_amount: u64
+    ) -> Result<()> {
+        process_create_dividend_distribution_checkpoint(ctx, root, total_distribution_amount)?;
+        Ok(())
+    }
+
+    pub fn claim_dividend_by_checkpoint(
+        ctx: Context<ClaimDividendCheckpoint>,
+        amount: u64,
+        proof: Vec<[u8; 32]>
+    ) -> Result<()> {
+        process_claim_dividend(ctx, amount, proof)?;
+        Ok(())
+    }
+
 }

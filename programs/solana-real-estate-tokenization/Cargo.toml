@@ -21,3 +21,5 @@ anchor-lang = "0.25.0"
 anchor-spl = "0.25.0"
 solana-program = "1.10"
 mpl-token-metadata = {version = "1.2.10", features = ["no-entrypoint"]}
+arrayref = "0.3.6"
+hex = "0.3.1"
