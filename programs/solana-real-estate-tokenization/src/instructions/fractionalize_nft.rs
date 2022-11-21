@@ -1,20 +1,33 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{
-    program::invoke_signed,
-    program_option::COption
-};
+use anchor_lang::solana_program::{program::invoke_signed, program_option::COption};
+
 use anchor_spl::token::spl_token::instruction::{set_authority, AuthorityType};
 use anchor_spl::token::{Mint, MintTo, Token, TokenAccount, ID as TokenProgramID};
 use arrayref::{array_ref, array_refs};
 
+use crate::assertions::assert_is_ata;
+use crate::constants::TOKEN_TREASURY_AUTHORITY_PDA_SEED;
 use crate::errors::LandLordErrors;
-use crate::state::asset_basket::{AssetBasket};
+use crate::state::asset_basket::AssetBasket;
 use crate::state::platform_governor::PlatformGovernor;
+use crate::utils::{spl_token_transfer, TokenTransferParams};
+use crate::ID;
 
-pub fn process_fractionalize_asset(ctx: Context<FractionalizeNFT>, total_supply: u64) -> Result<()> {
+pub fn process_fractionalize_asset(
+    ctx: Context<FractionalizeNFT>,
+    total_supply: u64,
+) -> Result<()> {
     let mint = &ctx.accounts.mint;
     let mint_account_info = mint.to_account_info();
     let mint_authority_info = &ctx.accounts.owner.to_account_info();
+
+    let mint_nft = &ctx.accounts.mint_nft;
+
+    let treasury_nft_token_account = &ctx.accounts.treasury_nft_token_account;
+    let (derived_treasury_address, _) = Pubkey::try_find_program_address(&[TOKEN_TREASURY_AUTHORITY_PDA_SEED], &ID).unwrap();
+
+    // PDA check
+    assert_is_ata(&&treasury_nft_token_account.to_account_info(), &derived_treasury_address, &mint_nft.key())?;
 
     let asset_basket = &mut ctx.accounts.asset_basket;
 
@@ -23,18 +36,24 @@ pub fn process_fractionalize_asset(ctx: Context<FractionalizeNFT>, total_supply:
     let big_guardian = &ctx.accounts.big_guardian;
     let big_guardian_account_info = big_guardian.to_account_info();
 
-    mint_token(
-        &ctx,
-        total_supply
-    )?;
+    mint_token(&ctx, total_supply)?;
 
     transfer_mint_authority(
-        &big_guardian.key(), 
-        &big_guardian_account_info, 
-        &mint_account_info, 
-        mint_authority_info, 
-        &ctx.accounts.token_program.to_account_info()
+        &big_guardian.key(),
+        &big_guardian_account_info,
+        &mint_account_info,
+        mint_authority_info,
+        &ctx.accounts.token_program.to_account_info(),
     )?;
+
+    spl_token_transfer(TokenTransferParams {
+        source: ctx.accounts.owner_nft_token_account.to_account_info(),
+        destination: treasury_nft_token_account.to_account_info(),
+        authority: ctx.accounts.owner.to_account_info(),
+        authority_signer_seeds: &[],
+        token_program: ctx.accounts.token_program.to_account_info(),
+        amount: 1,
+    })?;
 
     Ok(())
 }
@@ -43,9 +62,17 @@ fn mint_token<'a>(ctx: &'a Context<FractionalizeNFT>, total_supply: u64) -> Resu
     let cpi_program = ctx.accounts.token_program.to_account_info();
     let token_mint = ctx.accounts.mint.to_account_info();
     let token_mint_id = token_mint.key;
+    let token_account_info = &ctx.accounts.token_account.to_account_info();
+
+    assert_is_ata(
+        token_account_info,
+        &ctx.accounts.owner.key(),
+        &token_mint_id,
+    )?;
+
     let cpi_accounts = MintTo {
         mint: token_mint,
-        to: ctx.accounts.token_account.to_account_info(),
+        to: token_account_info.clone(),
         authority: ctx.accounts.owner.to_account_info(),
     };
     let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
@@ -106,9 +133,7 @@ pub fn transfer_mint_authority<'a>(
     Ok(())
 }
 
-pub fn get_mint_freeze_authority(
-    account_info: &AccountInfo,
-) -> Result<COption<Pubkey>> {
+pub fn get_mint_freeze_authority(account_info: &AccountInfo) -> Result<COption<Pubkey>> {
     let data = account_info.try_borrow_data().unwrap();
     let authority_bytes = array_ref![data, 36 + 8 + 1 + 1, 36];
 
@@ -124,7 +149,6 @@ fn unpack_coption_key(src: &[u8; 36]) -> Result<COption<Pubkey>> {
         _ => Err(LandLordErrors::InvalidAccountData.into()),
     }
 }
-
 
 #[derive(Accounts)]
 pub struct FractionalizeNFT<'info> {
@@ -147,8 +171,21 @@ pub struct FractionalizeNFT<'info> {
     )]
     pub asset_basket: Box<Account<'info, AssetBasket>>,
 
+    /// CHECK: This will be checked using CPI
+    #[account(mut)]
+    pub treasury_nft_token_account: UncheckedAccount<'info>,
+
     /// CHECK: This only used for asset_basket seeds generate
     pub mint_nft: UncheckedAccount<'info>,
+
+    /// CHECK: This only used for asset_basket seeds generate
+    #[account(
+        mut,
+        owner = TokenProgramID,
+        constraint = owner_nft_token_account.mint == mint_nft.key() @LandLordErrors::TokenAccountMintMismatched,
+        constraint = token_account.owner == owner.key() @LandLordErrors::TokenAccountOwnerMismatched
+    )]
+    pub owner_nft_token_account: Account<'info, TokenAccount>,
 
     #[account(
         mut,

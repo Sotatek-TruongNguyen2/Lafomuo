@@ -10,6 +10,7 @@ pub struct AssetBasket {
     pub asset_metadata: Pubkey,
     pub owner: Pubkey,
     pub governor: Pubkey,
+    pub total_distribution_checkpoint: u64,
     pub iat: i64,
     pub is_freezed: bool,
     pub bump: u8
@@ -24,7 +25,16 @@ pub struct AssetTokenization {
 }
 
 impl AssetBasket {
-    pub const LEN: usize = DISCRIMINATOR_LENGTH + PUBLIC_KEY_LENGTH + BOOL_LENGTH + U128_LENGTH +  PUBLIC_KEY_LENGTH * 4 + U128_LENGTH / 2 + BOOL_LENGTH + U128_LENGTH / U128_LENGTH;
+    pub const LEN: usize = 
+        DISCRIMINATOR_LENGTH +
+        // asset_tokenize 
+        PUBLIC_KEY_LENGTH + // token_mint 
+        BOOL_LENGTH + // tokenized 
+        U128_LENGTH +  // total_supply + tokenized_at
+        PUBLIC_KEY_LENGTH * 4 + // asset_id, asset_metadata, owner, govenror
+        U128_LENGTH + // total_distribution_checkpoint, iat
+        BOOL_LENGTH + // is_freezed
+        U128_LENGTH / U128_LENGTH; // bump (1 byte )
 
     pub fn init(
         &mut self, 

@@ -101,7 +101,8 @@ function getProgramInstance(connection, wallet) {
     );
 
     // Mint NFT - Fractionalize - Create Dividend Checkpoint - Claim dividend (Finish)
-    // DAO - Buyout
+    // DAO - Buyout 
+    // Crawlers (Aleph-im) - 3 services (API - Cron job - Aleph)
 
     // createAssociatedTokenAccountInstruction(assetOwner.publicKey, nftTokenAccount, assetOwner.publicKey, mintKey.publicKey)
 
@@ -130,7 +131,7 @@ function getProgramInstance(connection, wallet) {
     );
 
     // first data will be signed by big guardian
-    const ix = await program.methods.issueAsset("https://basc.s3.amazonaws.com/meta/3506.json", "Bored Apes").accounts(
+    const ix = await program.methods.issueAsset("https://basc.s3.amazonaws.com/meta/3506.json", "House A").accounts(
         {
             bigGuardian: program.provider.publicKey,
             governor: governor,
@@ -158,7 +159,9 @@ function getProgramInstance(connection, wallet) {
     // );
 
     mint_tx.add(ix);
+    
 
+    // co che confirm transaction tren solana voi ethereum
     const recentBlockhash = await program.provider.connection.getLatestBlockhash("confirmed");
 
     console.log("=========== Getting recent blockhash ===========");
@@ -167,17 +170,20 @@ function getProgramInstance(connection, wallet) {
     mint_tx.recentBlockhash = recentBlockhash.blockhash;
     mint_tx.feePayer = assetOwner.publicKey;
 
-    mint_tx.partialSign(admin.payer);
     mint_tx.partialSign(mintKey);
     mint_tx.partialSign(nftTokenAccount);
     mint_tx.partialSign(assetOwner);
 
-    const serialized_tx = mint_tx.serialize({
-        requireAllSignatures: false
-    });
+    console.log(mint_tx.serialize({ requireAllSignatures: false }).toString("base64"))
+    mint_tx.partialSign(admin.payer);
+    console.log(mint_tx.serialize({ requireAllSignatures: false }).toString("base64"))
 
-    console.log("Tx: ", serialized_tx.toString("base64"));
+    // const serialized_tx = mint_tx.serialize({
+    //     requireAllSignatures: false
+    // });
 
-    const finalTxHash = await program.provider.connection.sendRawTransaction(serialized_tx);
-    console.log("txHash :: ", finalTxHash)
+    // console.log("Tx: ", serialized_tx.toString("base64"));
+
+    // const finalTxHash = await program.provider.connection.sendRawTransaction(serialized_tx);
+    // console.log("txHash :: ", finalTxHash)
 })();

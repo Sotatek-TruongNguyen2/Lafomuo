@@ -252,7 +252,7 @@ pub struct IssueAsset<'info> {
         init,
         payer = owner,
         token::mint = mint,
-        token::authority = asset_basket,
+        token::authority = owner,
     )]
     pub token_account: Account<'info, TokenAccount>,
 

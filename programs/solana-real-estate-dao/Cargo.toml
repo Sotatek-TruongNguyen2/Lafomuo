@@ -1,12 +1,12 @@
 [package]
-name = "solana-real-estate-tokenization"
+name = "solana-real-estate-dao"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "solana_real_estate_tokenization"
+name = "solana_real_estate_dao"
 
 [features]
 no-entrypoint = []
@@ -17,7 +17,7 @@ default = []
 
 [dependencies]
 base64 = "0.13.0"
-anchor-lang = {version = "0.25.0", features = ["init-if-needed"]}
+anchor-lang = "0.25.0"
 anchor-spl = "0.25.0"
 solana-program = "1.10"
 mpl-token-metadata = {version = "1.2.10", features = ["no-entrypoint"]}

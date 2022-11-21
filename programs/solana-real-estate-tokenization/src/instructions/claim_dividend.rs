@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;    
 use anchor_spl::token::{Token, TokenAccount, ID as TokenProgramID};
 
-use crate::assertions::cmp_pubkeys;
+use crate::assertions::{assert_is_ata};
 use crate::constants::TOKEN_TREASURY_AUTHORITY_PDA_SEED;
 use crate::{merkle_proof::*, utils::{spl_token_transfer, TokenTransferParams}};
 use crate::errors::LandLordErrors;
@@ -48,10 +48,8 @@ pub fn process_claim_dividend(
     let derived_address = Pubkey::try_find_program_address(&seeds, &ID);
 
     if let Some((key, bump)) = derived_address {
-        if !cmp_pubkeys(&key, &ctx.accounts.treasury_token_account.owner) {
-            return Err(LandLordErrors::TokenAccountOwnerMismatched.into());
-        }
-        
+        assert_is_ata(&ctx.accounts.treasury_token_account.to_account_info().to_account_info(), &key, &dividend_distributor.token_mint.key())?;
+
         spl_token_transfer(TokenTransferParams {
             source: ctx.accounts.treasury_token_account.to_account_info(),
             destination: ctx.accounts.claimer_token_account.to_account_info(),

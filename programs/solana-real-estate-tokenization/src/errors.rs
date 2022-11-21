@@ -26,7 +26,9 @@ pub enum LandLordErrors {
     FractionalTokenSupplyNotPure,
     NFTIsAlreadyFractionalized,
     TokenTreasuryPDANotFound,
+    #[msg("Invalid Dividend Distribution Merkle proofs!!")]
     InvalidMerkleProof,
+    #[msg("Dividend from this checkpoint is already claimed!!")]
     DividendAlreadyClaimed,
     ExceedsTotalDistributionAmount
 }

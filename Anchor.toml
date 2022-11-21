@@ -1,10 +1,13 @@
 [features]
 seeds = false
 skip-lint = false
+
 [programs.localnet]
 solana_real_estate_tokenization = "APN3jUjKCMX3nVX7cBFKa3heeJfyBhs1sSJT7bChj96E"
+solana_real_estate_dao = "ryfuXNpWhu8n6Hdej5bv8a37fTSrW1PQDbdbT7Vzam8"
 [programs.devnet]
 solana_real_estate_tokenization = "APN3jUjKCMX3nVX7cBFKa3heeJfyBhs1sSJT7bChj96E"
+solana_real_estate_dao = "ryfuXNpWhu8n6Hdej5bv8a37fTSrW1PQDbdbT7Vzam8"
 
 [registry]
 url = "https://api.devnet.solana.com"
