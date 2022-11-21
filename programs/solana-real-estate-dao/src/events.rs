@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::state::GovernanceParameters;
+use crate::state::{GovernanceParameters, LafomuoInstruction};
 
 /// Log to Program Log with a prologue so transaction scraper knows following line is valid mango log
 ///
@@ -26,4 +26,18 @@ pub struct GovernorCreateEvent {
     pub proposer: Pubkey,
     /// Governance parameters.
     pub parameters: GovernanceParameters,
+}
+/// Event called in [govern::create_proposal].
+#[event]
+pub struct ProposalCreateEvent {
+    /// The governor.
+    #[index]
+    pub governor: Pubkey,
+    /// The proposal being created.
+    #[index]
+    pub proposal: Pubkey,
+    /// The index of the [Proposal].
+    pub index: u64,
+    /// Instructions in the proposal.
+    pub instructions: Vec<LafomuoInstruction>,
 }

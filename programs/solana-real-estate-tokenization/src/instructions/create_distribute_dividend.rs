@@ -83,7 +83,8 @@ pub struct CreateDividendCheckpoint<'info> {
             b"basket",
             asset_basket.asset_id.key().as_ref(),
             owner.key().as_ref()    ,
-            governor.key().as_ref()
+            governor.key().as_ref(),
+            [asset_basket.basket_id as u8].as_ref()
         ],
         bump = asset_basket.bump,
     )]

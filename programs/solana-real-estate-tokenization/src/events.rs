@@ -82,3 +82,12 @@ pub struct DividendClaimed {
     pub total_claimed: u64,
     pub last_claimed_at: i64
 }
+
+#[event]
+pub struct NewLockerEvent {
+    pub governor: Pubkey,
+    pub locker: Pubkey,
+    pub token_mint: Pubkey,
+    pub asset_id: Pubkey,
+    pub basket_id: u64
+}

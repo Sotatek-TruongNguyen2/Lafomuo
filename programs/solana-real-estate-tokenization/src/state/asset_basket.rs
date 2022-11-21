@@ -6,6 +6,7 @@ use anchor_spl::token::{Mint};
 #[account]
 pub struct AssetBasket {
     pub asset_tokenize: AssetTokenization,
+    pub basket_id: u64,
     pub asset_id: Pubkey,
     pub asset_metadata: Pubkey,
     pub owner: Pubkey,
@@ -31,13 +32,15 @@ impl AssetBasket {
         PUBLIC_KEY_LENGTH + // token_mint 
         BOOL_LENGTH + // tokenized 
         U128_LENGTH +  // total_supply + tokenized_at
+        U128_LENGTH / 2 + // basket_id 
         PUBLIC_KEY_LENGTH * 4 + // asset_id, asset_metadata, owner, govenror
         U128_LENGTH + // total_distribution_checkpoint, iat
         BOOL_LENGTH + // is_freezed
-        U128_LENGTH / U128_LENGTH; // bump (1 byte )
+        U128_LENGTH / U128_LENGTH; // bump (1 byte)
 
     pub fn init(
         &mut self, 
+        basket_id: u64,
         bump: u8,
         asset_metadata: Pubkey,
         governor: Pubkey, 
@@ -47,6 +50,7 @@ impl AssetBasket {
         let clock: Clock = Clock::get().unwrap();
 
         self.bump = bump;
+        self.basket_id = basket_id;
         self.asset_metadata = asset_metadata;
         self.governor = governor;
         self.iat = clock.unix_timestamp;

@@ -5,10 +5,12 @@ use anchor_spl::token::spl_token::instruction::{set_authority, AuthorityType};
 use anchor_spl::token::{Mint, MintTo, Token, TokenAccount, ID as TokenProgramID};
 use arrayref::{array_ref, array_refs};
 
+use crate::events::NewLockerEvent;
 use crate::assertions::assert_is_ata;
 use crate::constants::TOKEN_TREASURY_AUTHORITY_PDA_SEED;
 use crate::errors::LandLordErrors;
 use crate::state::asset_basket::AssetBasket;
+use crate::state::asset_locker::AssetLocker;
 use crate::state::platform_governor::PlatformGovernor;
 use crate::utils::{spl_token_transfer, TokenTransferParams};
 use crate::ID;
@@ -28,6 +30,21 @@ pub fn process_fractionalize_asset(
 
     // PDA check
     assert_is_ata(&&treasury_nft_token_account.to_account_info(), &derived_treasury_address, &mint_nft.key())?;
+
+    let asset_locker = &mut ctx.accounts.asset_locker;
+    asset_locker.bump = *ctx.bumps.get("asset_locker").unwrap();
+    asset_locker.base = ctx.accounts.owner.key();
+    asset_locker.governor = ctx.accounts.governor.key();
+    asset_locker.locked_supply = 0;
+
+
+    emit!(NewLockerEvent {
+        governor: ctx.accounts.governor.key(),
+        locker: asset_locker.key(),
+        token_mint: mint_nft.key(),
+        asset_id: ctx.accounts.asset_basket.asset_id,
+        basket_id: ctx.accounts.asset_basket.basket_id
+    });
 
     let asset_basket = &mut ctx.accounts.asset_basket;
 
@@ -158,12 +175,28 @@ pub struct FractionalizeNFT<'info> {
     // Must be signed by big guardian to authorize asset issuing
     pub big_guardian: Signer<'info>,
 
+    /// [Locker].
     #[account(
+        init,
+        seeds = [
+            b"locker",
+            governor.key().as_ref(),
+            [asset_basket.basket_id as u8].as_ref()
+        ],
+        bump,
+        payer = owner,
+        space = AssetLocker::LEN
+    )]
+    pub asset_locker: Box<Account<'info, AssetLocker>>,
+
+    #[account(
+        mut,
         seeds = [
             b"basket",
             mint_nft.key().as_ref(),
-            owner.key().as_ref()    ,
-            governor.key().as_ref()
+            owner.key().as_ref(),
+            governor.key().as_ref(),
+            [asset_basket.basket_id as u8].as_ref()
         ],
         bump = asset_basket.bump,
         has_one = governor @LandLordErrors::GovernorMismatch,

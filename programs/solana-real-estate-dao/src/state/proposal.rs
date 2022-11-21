@@ -3,6 +3,9 @@ use anchor_lang::prelude::*;
 /// A Proposal is a pending transaction that may or may not be executed by the DAO.
 #[account]
 pub struct Proposal {
+    /// The instructions associated with the proposal.
+    pub instructions: Vec<LafomuoInstruction>,
+
     /// The public key of the governor.
     pub governor: Pubkey,
     /// The unique ID of the proposal, auto-incremented.
@@ -33,54 +36,50 @@ pub struct Proposal {
     /// This only applies to active proposals.
     pub voting_ends_at: i64,
 
-    /// The timestamp in which the proposal was queued, i.e.
-    /// approved for execution on the Smart Wallet.
-    pub queued_at: i64,
-    /// If the transaction was queued, this is the associated Goki Smart Wallet transaction.
-    pub queued_transaction: Pubkey,
-
-    // /// The instructions associated with the proposal.
-    // pub instructions: Vec<ProposalInstruction>,
+    // /// The timestamp in which the proposal was queued, i.e.
+    // /// approved for execution on the Smart Wallet.
+    // pub queued_at: i64,
+    // /// If the transaction was queued, this is the associated Goki Smart Wallet transaction.
+    // pub queued_transaction: Pubkey,
 }
-
 
 impl Proposal {
     /// Space that the [Proposal] takes up.
-    pub fn space() -> usize {
+    pub fn space(instructions: Vec<LafomuoInstruction>) -> usize {
         4  // Anchor discriminator.
         + 4 // Vec discriminator
             + std::mem::size_of::<Proposal>()
-            // + (instructions.iter().map(|ix| ix.space()).sum::<usize>())
+        + (instructions.iter().map(|ix| ix.space()).sum::<usize>())
     }
 }
 
-// /// Instruction.
-// #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, Default, PartialEq)]
-// pub struct ProposalInstruction {
-//     /// Pubkey of the instruction processor that executes this instruction
-//     pub program_id: Pubkey,
-//     /// Metadata for what accounts should be passed to the instruction processor
-//     pub keys: Vec<ProposalAccountMeta>,
-//     /// Opaque data passed to the instruction processor
-//     pub data: Vec<u8>,
-// }
+/// Instruction.
+#[derive(AnchorDeserialize, AnchorSerialize, Clone)]
+pub struct LafomuoInstruction {
+    /// Pubkey of the instruction processor that executes this instruction
+    pub program_id: Pubkey,
+    /// Metadata for what accounts should be passed to the instruction processor
+    pub keys: Vec<AccountMeta>,
+    /// Opaque data passed to the instruction processor
+    pub data: Vec<u8>,
+}
 
-// impl ProposalInstruction {
-//     /// Space that a [ProposalInstruction] takes up.
-//     pub fn space(&self) -> usize {
-//         std::mem::size_of::<Pubkey>()
-//             + (self.keys.len() as usize) * std::mem::size_of::<AccountMeta>()
-//             + (self.data.len() as usize)
-//     }
-// }
+impl LafomuoInstruction {
+    /// Space that a [ProposalInstruction] takes up.
+    pub fn space(&self) -> usize {
+        std::mem::size_of::<Pubkey>()
+            + (self.keys.len() as usize) * std::mem::size_of::<AccountMeta>()
+            + (self.data.len() as usize)
+    }
+}
 
-// /// Account metadata used to define Instructions
-// #[derive(AnchorSerialize, AnchorDeserialize, Debug, PartialEq, Copy, Clone)]
-// pub struct ProposalAccountMeta {
-//     /// An account's public key
-//     pub pubkey: Pubkey,
-//     /// True if an Instruction requires a Transaction signature matching `pubkey`.
-//     pub is_signer: bool,
-//     /// True if the `pubkey` can be loaded as a read-write account.
-//     pub is_writable: bool,
-// }
+/// Account metadata used to define Instructions
+#[derive(AnchorSerialize, AnchorDeserialize, Debug, PartialEq, Copy, Clone)]
+pub struct AccountMeta {
+    /// An account's public key
+    pub pubkey: Pubkey,
+    /// True if an Instruction requires a Transaction signature matching `pubkey`.
+    pub is_signer: bool,
+    /// True if the `pubkey` can be loaded as a read-write account.
+    pub is_writable: bool,
+}

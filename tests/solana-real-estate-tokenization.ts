@@ -52,6 +52,15 @@ describe("solana-real-estate-tokenization", () => {
     return treasuryPubkey;
   };
 
+  const getAssetLocker = async (programId: anchor.web3.PublicKey, governor: anchor.web3.PublicKey, basket_id: anchor.BN): Promise<anchor.web3.PublicKey> => {
+    const [assetLockerPubkey, _] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from("locker"), governor.toBuffer(), basket_id.toArrayLike(Buffer)],
+      programId
+    );
+
+    return assetLockerPubkey;
+  };
+
   const getDividendClaimedDetails = async (programId: anchor.web3.PublicKey, dividend_distributor: anchor.web3.PublicKey, claimer: anchor.web3.PublicKey): Promise<anchor.web3.PublicKey> => {
     const [metadataPubkey, _] = await anchor.web3.PublicKey.findProgramAddress(
       [Buffer.from("claim_dividend"), dividend_distributor.toBuffer(), claimer.toBuffer()],
@@ -84,10 +93,11 @@ describe("solana-real-estate-tokenization", () => {
     programID: anchor.web3.PublicKey,
     governor: anchor.web3.PublicKey,
     asset_owner: anchor.web3.PublicKey,
-    mint: anchor.web3.PublicKey
+    mint: anchor.web3.PublicKey,
+    basket_id: anchor.BN
   ): Promise<anchor.web3.PublicKey> => {
     const [assetBasketPubkey, _] = await anchor.web3.PublicKey.findProgramAddress(
-      [Buffer.from("basket"), mint.toBuffer(), asset_owner.toBuffer(), governor.toBuffer()],
+      [Buffer.from("basket"), mint.toBuffer(), asset_owner.toBuffer(), governor.toBuffer(), basket_id.toArrayLike(Buffer)],
       programID
     );
 
@@ -118,7 +128,7 @@ describe("solana-real-estate-tokenization", () => {
 
     const signature = await program.provider.connection.requestAirdrop(
       assetOwner.publicKey,
-      LAMPORTS_PER_SOL * 100
+      LAMPORTS_PER_SOL * 10000
     );
 
     await program.provider.connection.requestAirdrop(
@@ -186,7 +196,8 @@ describe("solana-real-estate-tokenization", () => {
       program.programId,
       governor.publicKey,
       assetOwner.publicKey,
-      mintKey.publicKey
+      mintKey.publicKey,
+      new anchor.BN(1)
     );
 
     const ix = await program.methods.issueAsset("https://basc.s3.amazonaws.com/meta/3506.json", "Bored Apes").accounts(
@@ -245,6 +256,8 @@ describe("solana-real-estate-tokenization", () => {
     const fractionalTokenMint = anchor.web3.Keypair.generate();
     const fractionalTokenAccount = await getAssociatedTokenAddress(fractionalTokenMint.publicKey, assetOwner.publicKey);
 
+    const assetBasketAccount = await program.account.assetBasket.fetch(assetBasketAddress);
+    const assetLocker = await getAssetLocker(program.programId, governor.publicKey, assetBasketAccount.basketId);
     const treasuryPDA = await getTokenTreasury(program.programId);
     const treasuryNFTTokenAccount = await getAssociatedTokenAddress(mintKey.publicKey, treasuryPDA, true);
 
@@ -275,7 +288,8 @@ describe("solana-real-estate-tokenization", () => {
       tokenProgram: TOKEN_PROGRAM_ID,
       mintNft: mintKey.publicKey,
       treasuryNftTokenAccount: treasuryNFTTokenAccount,
-      ownerNftTokenAccount: nftTokenAccount.publicKey
+      ownerNftTokenAccount: nftTokenAccount.publicKey,
+      assetLocker: assetLocker
     }).signers([
       // assetOwner
     ]).instruction();
@@ -283,6 +297,8 @@ describe("solana-real-estate-tokenization", () => {
     fractional_nft_tx.add(fractionalize_nft_ix);
 
     await program.provider.sendAndConfirm(fractional_nft_tx, [assetOwner, fractionalTokenMint]);
+
+    console.log("Finish fractional !!!!");
 
     const DIVIDEND_AIRDROP = [
       {

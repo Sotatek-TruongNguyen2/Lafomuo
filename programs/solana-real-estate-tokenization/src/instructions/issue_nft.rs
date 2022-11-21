@@ -18,21 +18,24 @@ pub fn process_issue_asset<'a>(ctx: Context<'_, '_, '_, 'a, IssueAsset<'a>>, uri
     let owner = &ctx.accounts.owner;
     let mint = &ctx.accounts.mint;
 
-    let asset_basket = &mut ctx.accounts.asset_basket;
-
-    asset_basket.init(
-        *ctx.bumps.get("asset_basket").unwrap(),
-        ctx.accounts.metadata.key(),
-        governor.key(),
-        owner.key(),
-        mint.key()
-    )?;
 
     if governor.is_mutable {
         governor.increase_total_minted(1)?;
     } else {
         return Err(LandLordErrors::ImmutableGovernor.into());
     }
+
+    // =====  Do asset basket initialization =====
+    let asset_basket = &mut ctx.accounts.asset_basket;
+
+    asset_basket.init(
+        governor.total_assets_minted,
+        *ctx.bumps.get("asset_basket").unwrap(),
+        ctx.accounts.metadata.key(),
+        governor.key(),
+        owner.key(),
+        mint.key()
+    )?;
 
     let token_mint = governor.minting_protocol_token;
 
@@ -234,8 +237,9 @@ pub struct IssueAsset<'info> {
         seeds = [
             b"basket",
             mint.key().as_ref(),
-            owner.key().as_ref()    ,
-            governor.key().as_ref()
+            owner.key().as_ref(),
+            governor.key().as_ref(),
+            [(governor.total_assets_minted + 1) as u8].as_ref()
         ],
         space = AssetBasket::LEN,
         bump,

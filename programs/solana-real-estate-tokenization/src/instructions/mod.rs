@@ -3,7 +3,9 @@ pub mod issue_nft;
 pub mod fractionalize_nft;
 pub mod create_distribute_dividend;
 pub mod claim_dividend;
+pub mod new_escrow;
 
+pub use new_escrow::*;
 pub use issue_nft::*;
 pub use setup_platform::*;
 pub use fractionalize_nft::*;
