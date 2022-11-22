@@ -1,7 +1,7 @@
 const IDL = require("../target/idl/solana_real_estate_tokenization.json");// directory of copy/paste types/your_program.ts file
 const anchor = require('@project-serum/anchor');
 
-const PROGRAM_ID = "APN3jUjKCMX3nVX7cBFKa3heeJfyBhs1sSJT7bChj96E";
+const PROGRAM_ID = "FZtmv1R8AgFU4K7TnD5pyANFVbz2dVvb4UkW9E14n5hm";
 
 function getProgramInstance(connection, wallet) {
     if (!wallet.publicKey) return;
@@ -33,25 +33,34 @@ function getProgramInstance(connection, wallet) {
     let fst_authority = anchor.web3.Keypair.generate();
     let sec_authority = anchor.web3.Keypair.generate();
     let governor = anchor.web3.Keypair.generate();
+    let setting = anchor.web3.Keypair.generate();
 
     let sol_treasury = anchor.web3.Keypair.generate();
     
     console.log("Sol-treasury: ", sol_treasury.publicKey.toBase58());
     console.log("Governor: ", governor.publicKey.toBase58());
+    console.log("setting: ", setting.publicKey.toBase58());
 
-    const tx = await program.methods.setupPlatform("LANDLORD", new anchor.BN(anchor.web3.LAMPORTS_PER_SOL))
+    const tx = await program.methods.setupPlatform(
+        "LANDLORD", 
+        new anchor.BN(anchor.web3.LAMPORTS_PER_SOL),
+        10,
+        4000
+    )
         .accounts({
             bigGuardian: program.provider.publicKey,
             governor: governor.publicKey,
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
             systemProgram: anchor.web3.SystemProgram.programId,
-            treasury: sol_treasury.publicKey
+            treasury: sol_treasury.publicKey,
+            setting: setting.publicKey
         })
         .remainingAccounts([
 
         ])
         .signers([
-            governor
+            governor,
+            setting
         ])
         .rpc();
 

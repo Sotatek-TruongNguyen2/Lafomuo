@@ -5,15 +5,15 @@ use anchor_spl::token::spl_token::instruction::{set_authority, AuthorityType};
 use anchor_spl::token::{Mint, MintTo, Token, TokenAccount, ID as TokenProgramID};
 use arrayref::{array_ref, array_refs};
 
-use crate::events::NewLockerEvent;
 use crate::assertions::assert_is_ata;
 use crate::constants::TOKEN_TREASURY_AUTHORITY_PDA_SEED;
 use crate::errors::LandLordErrors;
+use crate::events::{NewLockerEvent, AssetFractionalize};
 use crate::state::asset_basket::AssetBasket;
-use crate::state::asset_locker::AssetLocker;
+use crate::state::fractionalized_token_locker::FractionalizedTokenLocker;
 use crate::state::platform_governor::PlatformGovernor;
 use crate::utils::{spl_token_transfer, TokenTransferParams};
-use crate::ID;
+use crate::{landlord_emit, ID};
 
 pub fn process_fractionalize_asset(
     ctx: Context<FractionalizeNFT>,
@@ -26,21 +26,25 @@ pub fn process_fractionalize_asset(
     let mint_nft = &ctx.accounts.mint_nft;
 
     let treasury_nft_token_account = &ctx.accounts.treasury_nft_token_account;
-    let (derived_treasury_address, _) = Pubkey::try_find_program_address(&[TOKEN_TREASURY_AUTHORITY_PDA_SEED], &ID).unwrap();
+    let (derived_treasury_address, _) =
+        Pubkey::try_find_program_address(&[TOKEN_TREASURY_AUTHORITY_PDA_SEED], &ID).unwrap();
 
     // PDA check
-    assert_is_ata(&&treasury_nft_token_account.to_account_info(), &derived_treasury_address, &mint_nft.key())?;
+    assert_is_ata(
+        &&treasury_nft_token_account.to_account_info(),
+        &derived_treasury_address,
+        &mint_nft.key(),
+    )?;
 
-    let asset_locker = &mut ctx.accounts.asset_locker;
-    asset_locker.bump = *ctx.bumps.get("asset_locker").unwrap();
-    asset_locker.base = ctx.accounts.owner.key();
-    asset_locker.governor = ctx.accounts.governor.key();
-    asset_locker.locked_supply = 0;
+    let fractionalize_token_locker = &mut ctx.accounts.fractionalize_token_locker;
+    fractionalize_token_locker.bump = *ctx.bumps.get("fractionalize_token_locker").unwrap();
+    fractionalize_token_locker.base = ctx.accounts.owner.key();
+    fractionalize_token_locker.governor = ctx.accounts.governor.key();
+    fractionalize_token_locker.locked_supply = 0;
 
-
-    emit!(NewLockerEvent {
+    landlord_emit!(NewLockerEvent {
         governor: ctx.accounts.governor.key(),
-        locker: asset_locker.key(),
+        locker: fractionalize_token_locker.key(),
         token_mint: mint_nft.key(),
         asset_id: ctx.accounts.asset_basket.asset_id,
         basket_id: ctx.accounts.asset_basket.basket_id
@@ -71,6 +75,13 @@ pub fn process_fractionalize_asset(
         token_program: ctx.accounts.token_program.to_account_info(),
         amount: 1,
     })?;
+
+    landlord_emit!(AssetFractionalize {
+        mint: mint.key(),
+        governor: ctx.accounts.governor.key(),
+        asset_basket: ctx.accounts.asset_basket.key(),
+        total_supply
+    });
 
     Ok(())
 }
@@ -185,9 +196,9 @@ pub struct FractionalizeNFT<'info> {
         ],
         bump,
         payer = owner,
-        space = AssetLocker::LEN
+        space = FractionalizedTokenLocker::LEN
     )]
-    pub asset_locker: Box<Account<'info, AssetLocker>>,
+    pub fractionalize_token_locker: Box<Account<'info, FractionalizedTokenLocker>>,
 
     #[account(
         mut,

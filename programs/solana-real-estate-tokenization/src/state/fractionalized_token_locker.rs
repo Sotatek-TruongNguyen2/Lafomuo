@@ -4,7 +4,8 @@ use anchor_lang::prelude::*;
 /// A group of [Escrow]s.
 #[account]
 #[derive(Copy, Debug, Default)]
-pub struct AssetLocker {
+pub struct FractionalizedTokenLocker {
+    pub asset_id: Pubkey,
     /// Base account used to generate signer seeds.
     pub base: Pubkey,
     /// Governor associated with the [Locker].
@@ -17,8 +18,9 @@ pub struct AssetLocker {
     pub bump: u8,
 }
 
-impl AssetLocker {
+impl FractionalizedTokenLocker {
     pub const LEN: usize = DISCRIMINATOR_LENGTH +
+        PUBLIC_KEY_LENGTH + // asset_id
         PUBLIC_KEY_LENGTH + // base
         PUBLIC_KEY_LENGTH + // token_mint 
         PUBLIC_KEY_LENGTH + // governor

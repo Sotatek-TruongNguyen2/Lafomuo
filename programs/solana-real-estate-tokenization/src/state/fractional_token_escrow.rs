@@ -3,14 +3,13 @@ use crate::constants::*;
 
 #[account]
 pub struct FractionalTokenEscrow {
-    pub asset_id: Pubkey,
-    /// Mint of the token that must be locked in the [Locker].
-    pub token_mint: Pubkey,
-    /// Governor
-    pub governor: Pubkey,
+    /// The [Locker] that this [Escrow] is part of.
+    pub locker: Pubkey,
     pub owner: Pubkey,
-    pub suggested_price: u64,
+    /// The token account holding the escrow tokens.
+    pub hodl: Pubkey,
     pub locked_amount: u64,
+    pub suggested_price: u64,
     pub bump: u8
 }   
 
@@ -18,8 +17,8 @@ impl FractionalTokenEscrow {
     pub const LEN: usize = 
         DISCRIMINATOR_LENGTH +
         PUBLIC_KEY_LENGTH + // asset_id
-        PUBLIC_KEY_LENGTH + // governor 
-        PUBLIC_KEY_LENGTH +  // owner
-        U128_LENGTH + // suggested_price + locked_amount
+        PUBLIC_KEY_LENGTH + // owner 
+        PUBLIC_KEY_LENGTH +  // hodl
+        U128_LENGTH + // locked_amount + suggested_price
         BOOL_LENGTH; // bump
 }

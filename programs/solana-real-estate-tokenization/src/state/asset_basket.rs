@@ -3,6 +3,8 @@ use crate::errors::LandLordErrors;
 use crate::constants::*;
 use anchor_spl::token::{Mint};
 
+use super::auction::AuctionState;
+
 #[account]
 pub struct AssetBasket {
     pub asset_tokenize: AssetTokenization,
@@ -11,6 +13,8 @@ pub struct AssetBasket {
     pub asset_metadata: Pubkey,
     pub owner: Pubkey,
     pub governor: Pubkey,
+    pub auction_state: AuctionState,
+    pub average_price: u64,
     pub total_distribution_checkpoint: u64,
     pub iat: i64,
     pub is_freezed: bool,
@@ -33,7 +37,8 @@ impl AssetBasket {
         BOOL_LENGTH + // tokenized 
         U128_LENGTH +  // total_supply + tokenized_at
         U128_LENGTH / 2 + // basket_id 
-        PUBLIC_KEY_LENGTH * 4 + // asset_id, asset_metadata, owner, govenror
+        PUBLIC_KEY_LENGTH * 4 + // asset_id, asset_metadata, owner, governor
+        U128_LENGTH + // Auction State
         U128_LENGTH + // total_distribution_checkpoint, iat
         BOOL_LENGTH + // is_freezed
         U128_LENGTH / U128_LENGTH; // bump (1 byte)
@@ -57,6 +62,7 @@ impl AssetBasket {
         self.asset_id = mint;
         self.owner = owner;
         self.is_freezed = false;
+        self.auction_state = AuctionState::INACTIVE;
 
         Ok(self)
     }

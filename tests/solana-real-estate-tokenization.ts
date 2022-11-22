@@ -20,18 +20,18 @@ import { MerkleTree } from 'merkletreejs';
 
 type Keypair = anchor.web3.Keypair;
 
-function getProgramInstance(
-  provider: anchor.Provider,
-  programId: anchor.web3.PublicKey,
-  IDL: any
-): anchor.Program {
-  // Read the generated IDL.
-  const idl = IDL;
-  // Address of the deployed program.
-  // Generate the program client from IDL.
-  const program = new anchor.Program(idl, programId, provider);
-  return program;
-}
+// function getProgramInstance(
+//   provider: anchor.Provider,
+//   programId: anchor.web3.PublicKey,
+//   IDL: any
+// ): anchor.Program {
+//   // Read the generated IDL.
+//   const idl = IDL;
+//   // Address of the deployed program.
+//   // Generate the program client from IDL.
+//   const program = new anchor.Program(idl, programId, provider);
+//   return program;
+// }
 
 describe("solana-real-estate-tokenization", () => {
   // Configure the client to use the local cluster.
@@ -109,11 +109,16 @@ describe("solana-real-estate-tokenization", () => {
   let sec_authority: Keypair;
   let governor: Keypair;
   let sol_treasury: Keypair;
+  let setting: Keypair;
   let dividend_distributor: Keypair;
   let paymentToken: Keypair;
   let claimedDividend: Keypair;
 
+  const MIN_RESERVE_FACTOR = 10;
+  const MAX_RESERVE_FACTOR = 4000;
+
   it("Is initialized!", async () => {
+    setting = anchor.web3.Keypair.generate();
     claimedDividend = anchor.web3.Keypair.generate();
     paymentToken = anchor.web3.Keypair.generate();
     dividend_distributor = anchor.web3.Keypair.generate();
@@ -122,6 +127,12 @@ describe("solana-real-estate-tokenization", () => {
     assetOwner = anchor.web3.Keypair.generate();
     fst_authority = anchor.web3.Keypair.generate();
     sec_authority = anchor.web3.Keypair.generate();
+
+    console.log(
+      setting.publicKey.toBase58(),
+      sol_treasury.publicKey.toBase58(),
+      governor.publicKey.toBase58()
+    )
 
     const mintKey: anchor.web3.Keypair = anchor.web3.Keypair.generate();
     const nftTokenAccount = anchor.web3.Keypair.generate();
@@ -166,19 +177,21 @@ describe("solana-real-estate-tokenization", () => {
 
     console.log("===== Start initializing Mint and token account ====== ", program.programId.toBase58());
 
-    await program.methods.setupPlatform("LANDLORD", new anchor.BN(anchor.web3.LAMPORTS_PER_SOL))
+    await program.methods.setupPlatform("LANDLORD", new anchor.BN(anchor.web3.LAMPORTS_PER_SOL), MIN_RESERVE_FACTOR, MAX_RESERVE_FACTOR)
       .accounts({
         bigGuardian: program.provider.publicKey,
         governor: governor.publicKey,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
-        treasury: sol_treasury.publicKey
+        treasury: sol_treasury.publicKey,
+        setting: setting.publicKey
       })
       .remainingAccounts([
 
       ])
       .signers([
-        governor
+        governor,
+        setting
       ]).rpc({
         commitment: "confirmed"
       });
@@ -241,7 +254,6 @@ describe("solana-real-estate-tokenization", () => {
     expect(metadataInfo.updateAuthority.toBase58()).to.be.equals(assetOwner.publicKey.toBase58());
     expect(metadataInfo.mint.toBase58()).to.be.equals(mintKey.publicKey.toBase58());
 
-    console.log(await program.account.assetBasket.fetch(assetBasketAddress));
     console.log((await program.account.platformGovernor.fetch(governor.publicKey)));
 
     const tokenAccountInfo = await program.provider.connection.getParsedAccountInfo(nftTokenAccount.publicKey);
@@ -289,7 +301,7 @@ describe("solana-real-estate-tokenization", () => {
       mintNft: mintKey.publicKey,
       treasuryNftTokenAccount: treasuryNFTTokenAccount,
       ownerNftTokenAccount: nftTokenAccount.publicKey,
-      assetLocker: assetLocker
+      fractionalizeTokenLocker: assetLocker
     }).signers([
       // assetOwner
     ]).instruction();

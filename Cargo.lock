@@ -1300,17 +1300,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-real-estate-dao"
-version = "0.1.0"
-dependencies = [
- "anchor-lang",
- "anchor-spl",
- "base64 0.13.1",
- "num-traits",
- "solana-program",
-]
-
-[[package]]
 name = "solana-real-estate-tokenization"
 version = "0.1.0"
 dependencies = [

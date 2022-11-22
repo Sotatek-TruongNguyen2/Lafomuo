@@ -59,10 +59,19 @@ pub fn mango_emit_buffers<T: AnchorSerialize + Discriminator>(
 pub struct AssetIssuance {
     pub owner: Pubkey,
     pub asset_id: Pubkey,
+    pub asset_token_account: Pubkey,
     pub owner_pda: Pubkey,
     pub master_edition: Pubkey,
     pub metadata: Pubkey,
     pub iat: i64
+}
+
+#[event]
+pub struct AssetFractionalize {
+    pub asset_basket: Pubkey,
+    pub governor: Pubkey,
+    pub mint: Pubkey,
+    pub total_supply: u64,
 }
 
 #[event]
@@ -90,4 +99,36 @@ pub struct NewLockerEvent {
     pub token_mint: Pubkey,
     pub asset_id: Pubkey,
     pub basket_id: u64
+}
+
+#[event]
+/// Event called in [locked_voter::new_escrow].
+pub struct NewEscrowEvent {
+    /// The [Escrow] being created.
+    pub escrow: Pubkey,
+    /// The owner of the [Escrow].
+    #[index]
+    pub escrow_owner: Pubkey,
+    /// The locker for the [Escrow].
+    #[index]
+    pub locker: Pubkey,
+    /// Timestamp for the event.
+    pub timestamp: i64,
+}
+
+#[event]
+/// Event called in [locked_voter::lock].
+pub struct LockEvent {
+    /// The locker of the [Escrow]
+    #[index]
+    pub locker: Pubkey,
+    /// The owner of the [Escrow].
+    #[index]
+    pub escrow_owner: Pubkey,
+    /// Mint of the token that for the [Locker].
+    pub token_mint: Pubkey,
+    /// Amount of tokens locked.
+    pub amount: u64,
+    /// Amount of tokens locked inside the [Locker].
+    pub locker_supply: u64,
 }

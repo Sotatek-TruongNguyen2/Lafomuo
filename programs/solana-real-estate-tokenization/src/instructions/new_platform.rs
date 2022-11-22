@@ -1,14 +1,17 @@
-use crate::state::platform_governor::PlatformGovernor;
 use anchor_lang::prelude::*;
 use anchor_spl::token::spl_token::state::{Mint, Account as TokenAccount};
 use anchor_spl::token::{ID as TokenProgramID};
 use crate::errors::LandLordErrors;
 use crate::assertions::{assert_initialized, assert_owned_by, cmp_pubkeys};
+use crate::state::setting::LafomuoSetting;
+use crate::state::platform_governor::PlatformGovernor;
 
 pub fn setup_platform_governor(
     ctx: Context<SetupPlatformGovernor>, 
     symbol: String,
-    minting_protocol_price: u64
+    minting_protocol_price: u64,
+    min_reserve_factor: u16,
+    max_reserve_factor: u16
 ) -> Result<()> {
     let mut token_mint: Option<Pubkey> = None; 
 
@@ -28,13 +31,17 @@ pub fn setup_platform_governor(
     }
 
     let big_guardian: &Signer = &ctx.accounts.big_guardian;
+    let setting = &mut ctx.accounts.setting;
+
+    setting.init(ctx.accounts.governor.key(), min_reserve_factor, max_reserve_factor)?;
 
     ctx.accounts.governor.init(
         minting_protocol_price,
         token_mint,
         symbol,
         ctx.accounts.treasury.key(),
-        big_guardian.key()
+        big_guardian.key(),
+        setting.key()
     )?;
 
     Ok(())
@@ -44,6 +51,8 @@ pub fn setup_platform_governor(
 pub struct SetupPlatformGovernor<'info> {
     #[account(init, payer = big_guardian, space = PlatformGovernor::LEN)]
     pub governor: Account<'info, PlatformGovernor>,
+    #[account(init, payer = big_guardian, space = LafomuoSetting::LEN)]
+    pub setting: Account<'info, LafomuoSetting>,
     #[account(mut)]
     pub big_guardian: Signer<'info>,
     /// CHECK: account checked in CPI

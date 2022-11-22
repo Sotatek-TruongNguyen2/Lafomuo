@@ -14,7 +14,8 @@ pub struct PlatformGovernor {
     pub minting_protocol_price: u64,
     pub minting_protocol_token: Option<Pubkey>,
     pub big_guardian: Pubkey,
-    pub treasury: Pubkey
+    pub treasury: Pubkey,
+    pub setting: Pubkey
 }
 
 impl PlatformGovernor {
@@ -25,7 +26,7 @@ impl PlatformGovernor {
     U128_LENGTH + // total_assets_burned - minting_protocol_price
     PUBLIC_KEY_LENGTH + //  minting_protocol_token
     VEC_LENGTH_PREFIX +  // guardians length
-    2 * PUBLIC_KEY_LENGTH + // (big_guardian - treasury)(2)
+    3 * PUBLIC_KEY_LENGTH + // (big_guardian - treasury - setting)(3)
     VEC_LENGTH_PREFIX + // string length
     MAX_TOPIC_LENGTH; // symbol length
 
@@ -35,7 +36,8 @@ impl PlatformGovernor {
         minting_protocol_token: Option<Pubkey>,
         symbol: String,
         treasury: Pubkey,
-        big_guardian: Pubkey
+        big_guardian: Pubkey,
+        setting: Pubkey
     ) -> Result<&mut PlatformGovernor> {
         // Allow authorities to change protocol price and token 
         self.is_mutable = true;
@@ -52,6 +54,7 @@ impl PlatformGovernor {
         
         self.symbol = new_symbol;
         self.big_guardian = big_guardian;
+        self.setting = setting;
         self.total_assets_minted = 0;
         self.total_assets_burned = 0;
         self.total_dividend_checkpoint = 0;

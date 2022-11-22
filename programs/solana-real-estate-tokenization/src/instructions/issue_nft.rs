@@ -18,7 +18,6 @@ pub fn process_issue_asset<'a>(ctx: Context<'_, '_, '_, 'a, IssueAsset<'a>>, uri
     let owner = &ctx.accounts.owner;
     let mint = &ctx.accounts.mint;
 
-
     if governor.is_mutable {
         governor.increase_total_minted(1)?;
     } else {
@@ -81,7 +80,8 @@ pub fn process_issue_asset<'a>(ctx: Context<'_, '_, '_, 'a, IssueAsset<'a>>, uri
             owner_pda: asset_basket.key(),
             iat: asset_basket.iat,
             master_edition: ctx.accounts.master_edition.key(),
-            metadata: ctx.accounts.metadata.key()
+            metadata: ctx.accounts.metadata.key(),
+            asset_token_account: ctx.accounts.token_account.key()
         }
     );
 

@@ -10,7 +10,7 @@ pub mod merkle_proof;
 use anchor_lang::prelude::*;
 use instructions::*;
 
-declare_id!("APN3jUjKCMX3nVX7cBFKa3heeJfyBhs1sSJT7bChj96E");
+declare_id!("FZtmv1R8AgFU4K7TnD5pyANFVbz2dVvb4UkW9E14n5hm");
 
 #[program]
 pub mod solana_real_estate_tokenization {
@@ -20,8 +20,10 @@ pub mod solana_real_estate_tokenization {
         ctx: Context<SetupPlatformGovernor>,
         symbol: String,
         minting_protocol_price: u64, 
+        min_reserve_factor: u16,
+        max_reserve_factor: u16
     ) -> Result<()> {
-        setup_platform_governor(ctx, symbol, minting_protocol_price)?;
+        setup_platform_governor(ctx, symbol, minting_protocol_price, min_reserve_factor, max_reserve_factor)?;
         Ok(())
     }
 
@@ -57,6 +59,21 @@ pub mod solana_real_estate_tokenization {
         proof: Vec<[u8; 32]>
     ) -> Result<()> {
         process_claim_dividend(ctx, amount, proof)?;
+        Ok(())
+    }
+
+    pub fn new_escrow(
+        ctx: Context<NewEscrow>,
+    ) -> Result<()> {
+        process_new_escrow(ctx)?;
+        Ok(())
+    }
+
+    pub fn lock(
+        ctx: Context<Lock>,
+        amount: u64
+    ) -> Result<()> {
+        process_escrow_lock(ctx, amount)?;
         Ok(())
     }
 

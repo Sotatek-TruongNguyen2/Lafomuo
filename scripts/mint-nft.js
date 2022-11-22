@@ -7,10 +7,25 @@ const {
     TOKEN_PROGRAM_ID,
     MINT_SIZE,
 } = require("@solana/spl-token");
-const PROGRAM_ID = "APN3jUjKCMX3nVX7cBFKa3heeJfyBhs1sSJT7bChj96E";
+const PROGRAM_ID = "FZtmv1R8AgFU4K7TnD5pyANFVbz2dVvb4UkW9E14n5hm";
 const bs58 = require('bs58');
 
 const TOKEN_METADATA_PROGRAM_ID = new anchor.web3.PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+
+const getAssetBasket = async (
+    programID,
+    governor,
+    asset_owner,
+    mint,
+    basket_id
+) => {
+    const [assetBasketPubkey, _] = await anchor.web3.PublicKey.findProgramAddress(
+        [Buffer.from("basket"), mint.toBuffer(), asset_owner.toBuffer(), governor.toBuffer(), basket_id.toArrayLike(Buffer)],
+        programID
+    );
+
+    return assetBasketPubkey;
+};
 
 const getMetadata = async (mint) => {
     const [metadataPubkey, _] = await anchor.web3.PublicKey.findProgramAddress(
@@ -29,20 +44,6 @@ const getMasterEdition = async (mint) => {
     );
 
     return masterEditionPubkey;
-};
-
-const getAssetBasket = async (
-    programID,
-    governor,
-    asset_owner,
-    mint
-) => {
-    const [assetBasketPubkey, _] = await anchor.web3.PublicKey.findProgramAddress(
-        [Buffer.from("basket"), mint.toBuffer(), asset_owner.toBuffer(), governor.toBuffer()],
-        programID
-    );
-
-    return assetBasketPubkey;
 };
 
 function getProgramInstance(connection, wallet) {
@@ -70,6 +71,8 @@ function getProgramInstance(connection, wallet) {
     const connection = new anchor.web3.Connection(anchor.web3.clusterApiUrl("devnet"), "confirmed");
     const admin = new anchor.Wallet(adminKeyPair);
 
+    console.log(bs58.encode(adminKeyPair.publicKey.toBuffer()));
+
     // ========= this part shouldn't be done by FE + BE ( just for demo purpose ) ================
     let assetOwnerSecretKey = bs58.decode("56cbXYaekA6grbUrYM8qL6SMQuVzqQGZUjwruV4oEcuqdaoiJrkBm8P8Rz5d1fVYJDFhJpCE5Ri7Bai39m7rEiLi");
     const assetOwner = anchor.web3.Keypair.fromSecretKey(
@@ -77,8 +80,8 @@ function getProgramInstance(connection, wallet) {
     )
 
     // sol_treasury, governor: Provided by admin
-    let sol_treasury = new anchor.web3.PublicKey("FMLqFR1EgFNLX2BU1QZqUDrmFh4hb4e5mMFmHv8kwmEd");
-    let governor = new anchor.web3.PublicKey("BCtVtNTScpSzWa5Mvo6VKaFRzA4dgpYBUAvpo2mNjJiX");
+    let sol_treasury = new anchor.web3.PublicKey("6tzHJCsUgHg5AaSsJ2bk829ZU6KkxkLQAvpZBytBo6kM");
+    let governor = new anchor.web3.PublicKey("2Auyf1oknPZZvJyabr2heEsecCJyDahdDAPn6L3FqhRm");
 
     // Must be by FE
     const mintKey = anchor.web3.Keypair.generate();
@@ -119,15 +122,15 @@ function getProgramInstance(connection, wallet) {
 
     const metadataAddress = await getMetadata(mintKey.publicKey);
     const masterEdition = await getMasterEdition(mintKey.publicKey);
-    // programID: anchor.web3.PublicKey,
-    // governor: anchor.web3.PublicKey,
-    // asset_owner: anchor.web3.PublicKey,
-    // mint: anchor.web3.PublicKey
+    const governorAccount = await program.provider.connection.getAccountInfo(governor);
+    const governorDetails = program.coder.accounts.decode("PlatformGovernor", governorAccount.data);
+
     const assetBasketAddress = await getAssetBasket(
         program.programId,
         governor,
         assetOwner.publicKey,
-        mintKey.publicKey
+        mintKey.publicKey,
+        governorDetails.totalAssetsMinted.add(new anchor.BN(1))
     );
 
     // first data will be signed by big guardian
@@ -159,7 +162,7 @@ function getProgramInstance(connection, wallet) {
     // );
 
     mint_tx.add(ix);
-    
+
 
     // co che confirm transaction tren solana voi ethereum
     const recentBlockhash = await program.provider.connection.getLatestBlockhash("confirmed");
@@ -174,16 +177,24 @@ function getProgramInstance(connection, wallet) {
     mint_tx.partialSign(nftTokenAccount);
     mint_tx.partialSign(assetOwner);
 
-    console.log(mint_tx.serialize({ requireAllSignatures: false }).toString("base64"))
-    mint_tx.partialSign(admin.payer);
-    console.log(mint_tx.serialize({ requireAllSignatures: false }).toString("base64"))
+    // console.log(tx);
+    // console.log(mint_tx.serialize({ requireAllSignatures: false }).toString("base64"))
+    // mint_tx.partialSign(admin.payer);
 
-    // const serialized_tx = mint_tx.serialize({
-    //     requireAllSignatures: false
-    // });
+    const tx = anchor.web3.Transaction.from(Buffer.from(await mint_tx.serialize({
+        requireAllSignatures: false
+    }), "base64"));
+
+
+    tx.partialSign(admin.payer);
+    // console.log(tx.serialize({ requireAllSignatures: false }).toString("base64"))
+
+    const serialized_tx = tx.serialize({
+        requireAllSignatures: false
+    });
 
     // console.log("Tx: ", serialized_tx.toString("base64"));
 
-    // const finalTxHash = await program.provider.connection.sendRawTransaction(serialized_tx);
-    // console.log("txHash :: ", finalTxHash)
+    const finalTxHash = await program.provider.connection.sendRawTransaction(serialized_tx);
+    console.log("txHash :: ", finalTxHash)
 })();

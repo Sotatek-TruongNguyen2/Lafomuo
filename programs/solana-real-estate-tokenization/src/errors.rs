@@ -30,5 +30,9 @@ pub enum LandLordErrors {
     InvalidMerkleProof,
     #[msg("Dividend from this checkpoint is already claimed!!")]
     DividendAlreadyClaimed,
-    ExceedsTotalDistributionAmount
+    ExceedsTotalDistributionAmount,
+    InvalidReserveFactorForSetting,
+    MinReserveFactorGreaterThanMax,
+    ReserveFactorMoreThanBasisPoint,
+    SettingAccountMismatched
 }
