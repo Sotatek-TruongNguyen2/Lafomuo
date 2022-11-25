@@ -7,8 +7,9 @@ const {
     TOKEN_PROGRAM_ID,
     MINT_SIZE,
 } = require("@solana/spl-token");
-const PROGRAM_ID = "FZtmv1R8AgFU4K7TnD5pyANFVbz2dVvb4UkW9E14n5hm";
+const PROGRAM_ID = "2bUX9z3VgNm8yYzqxBMS1Fto3L5r7dkWTUp85ukciBcg";
 const bs58 = require('bs58');
+const { sha256 } = require("js-sha256");
 
 const TOKEN_METADATA_PROGRAM_ID = new anchor.web3.PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
 
@@ -81,9 +82,9 @@ function getProgramInstance(connection, wallet) {
         assetOwnerSecretKey
     )
 
-    // sol_treasury, governor: Provided by admin
-    let sol_treasury = new anchor.web3.PublicKey("6tzHJCsUgHg5AaSsJ2bk829ZU6KkxkLQAvpZBytBo6kM");
-    let governor = new anchor.web3.PublicKey("2Auyf1oknPZZvJyabr2heEsecCJyDahdDAPn6L3FqhRm");
+     // sol_treasury, governor: Provided by admin
+     let sol_treasury = new anchor.web3.PublicKey("8zhub8g59f2hyn2VKyho1mvUbY1vXkTZFHkFWibLEz8q");
+     let governor = new anchor.web3.PublicKey("5MvPJqs6MVymt6XjUUHPdwVnD7yCMntTHzTHbUrYj5VL");
 
     // Must be by FE
     const program = getProgramInstance(connection, admin);
@@ -93,10 +94,10 @@ function getProgramInstance(connection, wallet) {
 
     // All 3 accounts should be queried from our BE
     // nft token account 
-    const nftTokenAccount = new anchor.web3.PublicKey("7vhxHyQrQp5tLYozLiyjzyXMTLwHXwxvFtj9Na7LPzCU");
-    const assetBasketAddress = new anchor.web3.PublicKey("4FyKqzT5Ep24pVCmu7d8Xqsg7XAc5tGX3ZzpK5JaSCg5");
+    const nftTokenAccount = new anchor.web3.PublicKey("E4Vs2bj4FHdi5RbXZsufEFHi2bz1dwuyoW4rvpKVtJj8");
+    const assetBasketAddress = new anchor.web3.PublicKey("E7JFbq8o3auKMSRU4yydxMwNajHYAetxvj8CAvQGEnhZ");
     // nft-mint account ( nft address ) 
-    const mintKey = new anchor.web3.PublicKey("EJb9G5HwV9FhFqJ7wd19gJzDbwRWVQtZb3tmFeWZN6Cz");
+    const mintKey = new anchor.web3.PublicKey("ApoRqaZB5SLB9wTZHofn7815p2uX2kqBn1mGWeeBQAF3");
 
     const assetBasketAccount = await program.account.assetBasket.fetch(assetBasketAddress);
     const assetLocker = await getAssetLocker(program.programId, governor, assetBasketAccount.basketId);
@@ -161,15 +162,62 @@ function getProgramInstance(connection, wallet) {
         requireAllSignatures: false
     });
 
-    // console.log("Tx: ", serialized_tx.toString("base64"));
+    console.log("Tx: ", serialized_tx.toString("base64"));
 
-    // const finalTxHash = await program.provider.connection.sendRawTransaction(serialized_tx);
-    // console.log("txHash :: ", finalTxHash)
+    const finalTxHash = await program.provider.connection.sendRawTransaction(serialized_tx);
+    console.log("txHash :: ", finalTxHash)
 
-    const tx_details = await program.provider.connection.getTransaction("4FkwPfcYiMFTLuGLTxc5zjitAUTDY5yEFN4AdVsoHAEtNuaW99FmBapmt7XpyV2vsAu4dQzuHB1jvQSyUMRzwZv4")
-    console.log(tx_details);
-    // const log = tx_details.meta.logMessages[tx_details.meta.logMessages.length - 3].split("Program data: ")[1];
-    // const coder = new anchor.BorshEventCoder(IDL);
+    // console.log(
+    //     treasuryNFTTokenAccount.toBase58(),
+    //     (
+    //         await program.provider.connection.getTokenAccountsByOwner(assetOwner.publicKey, {
+    //             mint: new anchor.web3.PublicKey("9byF2kYGCRpwQjWF7hME1gVpQ5wZmNixijs6oYWRoXPD"),
+    //             programId: TOKEN_PROGRAM_ID
+    //         })
+    //     ).value[0].pubkey.toBase58()
+    // );
 
-    // console.log(coder.decode(log));
+    // console.log(await program.provider.connection.getTokenAccountBalance(new anchor.web3.PublicKey("FomJvbqxeQyL1ZJVccZ33JTmFhGLiCDLFrX8XBr2dnAf")));
+
+    // const tx_details = await program.provider.connection.getTransaction("4FkwPfcYiMFTLuGLTxc5zjitAUTDY5yEFN4AdVsoHAEtNuaW99FmBapmt7XpyV2vsAu4dQzuHB1jvQSyUMRzwZv4")
+    // console.log(tx_details);
+    // // const log = tx_details.meta.logMessages[tx_details.meta.logMessages.length - 3].split("Program data: ")[1];
+    // // const coder = new anchor.BorshEventCoder(IDL);
+
+    // // console.log(coder.decode(log));
+    // const fractionalizeTokenLockerDiscriminator = Buffer.from(sha256.digest('account:FractionalizedTokenLocker')).slice(0, 8);
+    // const assetBasketDiscriminator = Buffer.from(sha256.digest('account:AssetBasket')).slice(0, 8);
+    // console.log(
+    //     await program.provider.connection.getProgramAccounts(new anchor.web3.PublicKey(PROGRAM_ID))
+    // );
+    // const assetBasketAccounts = await connection.getProgramAccounts(new anchor.web3.PublicKey(PROGRAM_ID), {
+    //     filters: [
+    //         { memcmp: { offset: 0, bytes: bs58.encode(assetBasketDiscriminator) } }, // Ensure it's a CandyMachine account.
+    //         { memcmp: { offset: 8 + 32 + 1 + 16 + 8 + 32 * 3, bytes: governor.toBase58() } }, // Ensure it's a CandyMachine account.
+    //     ],
+    // })
+
+    // const lockerAccount = await connection.getProgramAccounts(new anchor.web3.PublicKey(PROGRAM_ID), {
+    //     filters: [
+    //         { memcmp: { offset: 0, bytes: bs58.encode(fractionalizeTokenLockerDiscriminator) } }, // Ensure it's a CandyMachine account.
+    //         { memcmp: { offset: 8 + 32 * 2, bytes: bs58.encode(governor.toBuffer()) } }, // Ensure it's a CandyMachine account.
+    //     ],
+    // })
+
+    // console.log("AssetBasket length: ", assetBasketAccounts.length);
+
+    // // parse AssetBasket account info
+    // for (let account of assetBasketAccounts) {
+    //     console.log(`==== Account: ${account.pubkey.toBase58()} ====`);
+    //     const coder = new anchor.BorshAccountsCoder(IDL);
+    //     console.log(coder.decode("AssetBasket", account.account.data))
+    // }
+
+    // // parse FractionalizeTokenLocker account info
+    // for (let account of lockerAccount) {
+    //     console.log(`==== Account: ${account.pubkey.toBase58()} ====`);
+    //     const coder = new anchor.BorshAccountsCoder(IDL);
+    //     const a = coder.decode("FractionalizedTokenLocker", account.account.data);
+    //     console.log(a.assetId.toBase58());
+    // }
 })();

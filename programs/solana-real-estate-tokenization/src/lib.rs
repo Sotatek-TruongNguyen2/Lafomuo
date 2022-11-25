@@ -10,7 +10,7 @@ pub mod merkle_proof;
 use anchor_lang::prelude::*;
 use instructions::*;
 
-declare_id!("FZtmv1R8AgFU4K7TnD5pyANFVbz2dVvb4UkW9E14n5hm");
+declare_id!("2bUX9z3VgNm8yYzqxBMS1Fto3L5r7dkWTUp85ukciBcg");
 
 #[program]
 pub mod solana_real_estate_tokenization {

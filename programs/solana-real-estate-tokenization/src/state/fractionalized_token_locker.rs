@@ -5,7 +5,7 @@ use anchor_lang::prelude::*;
 #[account]
 #[derive(Copy, Debug, Default)]
 pub struct FractionalizedTokenLocker {
-    pub asset_id: Pubkey,
+    pub basket_id: u64,
     /// Base account used to generate signer seeds.
     pub base: Pubkey,
     /// Governor associated with the [Locker].
@@ -20,7 +20,7 @@ pub struct FractionalizedTokenLocker {
 
 impl FractionalizedTokenLocker {
     pub const LEN: usize = DISCRIMINATOR_LENGTH +
-        PUBLIC_KEY_LENGTH + // asset_id
+        U128_LENGTH / 2 + // asset_id
         PUBLIC_KEY_LENGTH + // base
         PUBLIC_KEY_LENGTH + // token_mint 
         PUBLIC_KEY_LENGTH + // governor

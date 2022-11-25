@@ -3,9 +3,9 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-solana_real_estate_tokenization = "FZtmv1R8AgFU4K7TnD5pyANFVbz2dVvb4UkW9E14n5hm"
+solana_real_estate_tokenization = "2bUX9z3VgNm8yYzqxBMS1Fto3L5r7dkWTUp85ukciBcg"
 [programs.devnet]
-solana_real_estate_tokenization = "FZtmv1R8AgFU4K7TnD5pyANFVbz2dVvb4UkW9E14n5hm"
+solana_real_estate_tokenization = "2bUX9z3VgNm8yYzqxBMS1Fto3L5r7dkWTUp85ukciBcg"
 
 [registry]
 url = "https://rpc.ankr.com/solana_devnet"

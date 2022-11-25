@@ -41,6 +41,7 @@ pub fn process_fractionalize_asset(
     fractionalize_token_locker.base = ctx.accounts.owner.key();
     fractionalize_token_locker.governor = ctx.accounts.governor.key();
     fractionalize_token_locker.locked_supply = 0;
+    fractionalize_token_locker.basket_id = ctx.accounts.asset_basket.basket_id;
 
     landlord_emit!(NewLockerEvent {
         governor: ctx.accounts.governor.key(),

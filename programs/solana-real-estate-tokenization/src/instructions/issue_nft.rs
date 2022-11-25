@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{program::invoke, system_instruction};
-use anchor_spl::token::{Mint, Token, MintTo, ID as TokenProgramID, TokenAccount};
+use anchor_spl::token::{Mint, Token, MintTo, ID as TokenProgramID};
 use mpl_token_metadata::instruction::{create_master_edition_v3, create_metadata_accounts_v2};
 
 use crate::landlord_emit;
@@ -104,6 +104,9 @@ fn mint_token<'a>(ctx: &'a Context<IssueAsset>) -> Result<&'a Pubkey> {
     let cpi_program = ctx.accounts.token_program.to_account_info();
     let token_mint = ctx.accounts.mint.to_account_info();
     let token_mint_id = token_mint.key;
+
+    assert_is_ata(&ctx.accounts.token_account.to_account_info(), &ctx.accounts.owner.key(), &token_mint.key())?;
+
     let cpi_accounts = MintTo {
         mint: token_mint,
         to: ctx.accounts.token_account.to_account_info(),
@@ -252,13 +255,8 @@ pub struct IssueAsset<'info> {
     )]
     pub mint: Account<'info, Mint>,
 
-    #[account(
-        init,
-        payer = owner,
-        token::mint = mint,
-        token::authority = owner,
-    )]
-    pub token_account: Account<'info, TokenAccount>,
+    /// CHECK: already checked in spl token transfer code
+    pub token_account: UncheckedAccount<'info>,
 
     #[account(
         mut,

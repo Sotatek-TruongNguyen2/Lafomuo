@@ -1,7 +1,7 @@
 const IDL = require("../target/idl/solana_real_estate_tokenization.json");// directory of copy/paste types/your_program.ts file
 const anchor = require('@project-serum/anchor');
 
-const PROGRAM_ID = "FZtmv1R8AgFU4K7TnD5pyANFVbz2dVvb4UkW9E14n5hm";
+const PROGRAM_ID = "2bUX9z3VgNm8yYzqxBMS1Fto3L5r7dkWTUp85ukciBcg";
 
 function getProgramInstance(connection, wallet) {
     if (!wallet.publicKey) return;

@@ -7,7 +7,7 @@ const {
     TOKEN_PROGRAM_ID,
     MINT_SIZE,
 } = require("@solana/spl-token");
-const PROGRAM_ID = "FZtmv1R8AgFU4K7TnD5pyANFVbz2dVvb4UkW9E14n5hm";
+const PROGRAM_ID = "2bUX9z3VgNm8yYzqxBMS1Fto3L5r7dkWTUp85ukciBcg";
 const bs58 = require('bs58');
 
 const TOKEN_METADATA_PROGRAM_ID = new anchor.web3.PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
@@ -80,12 +80,12 @@ function getProgramInstance(connection, wallet) {
     )
 
     // sol_treasury, governor: Provided by admin
-    let sol_treasury = new anchor.web3.PublicKey("6tzHJCsUgHg5AaSsJ2bk829ZU6KkxkLQAvpZBytBo6kM");
-    let governor = new anchor.web3.PublicKey("2Auyf1oknPZZvJyabr2heEsecCJyDahdDAPn6L3FqhRm");
+    let sol_treasury = new anchor.web3.PublicKey("8zhub8g59f2hyn2VKyho1mvUbY1vXkTZFHkFWibLEz8q");
+    let governor = new anchor.web3.PublicKey("5MvPJqs6MVymt6XjUUHPdwVnD7yCMntTHzTHbUrYj5VL");
 
     // Must be by FE
     const mintKey = anchor.web3.Keypair.generate();
-    const nftTokenAccount = anchor.web3.Keypair.generate();
+    const nftTokenAccount = await getAssociatedTokenAddress(mintKey.publicKey, assetOwner.publicKey, false);
 
     const program = getProgramInstance(connection, admin);
     const lamports = await program.provider.connection.getMinimumBalanceForRentExemption(MINT_SIZE);
@@ -101,6 +101,7 @@ function getProgramInstance(connection, wallet) {
             lamports,
         }),
         createInitializeMintInstruction(mintKey.publicKey, 0, assetOwner.publicKey, assetOwner.publicKey, TOKEN_PROGRAM_ID),
+        createAssociatedTokenAccountInstruction(assetOwner.publicKey, nftTokenAccount, assetOwner.publicKey, mintKey.publicKey, TOKEN_PROGRAM_ID),
     );
 
     // Mint NFT - Fractionalize - Create Dividend Checkpoint - Claim dividend (Finish)
@@ -133,6 +134,12 @@ function getProgramInstance(connection, wallet) {
         governorDetails.totalAssetsMinted.add(new anchor.BN(1))
     );
 
+    console.log(
+        "Issue Asset: ",
+        nftTokenAccount.toBase58(),
+        assetBasketAddress.toBase58()
+    )
+
     // first data will be signed by big guardian
     const ix = await program.methods.issueAsset("https://basc.s3.amazonaws.com/meta/3506.json", "House A").accounts(
         {
@@ -147,7 +154,7 @@ function getProgramInstance(connection, wallet) {
             mint: mintKey.publicKey,
             mintAuthority: assetOwner.publicKey,
             updateAuthority: assetOwner.publicKey,
-            tokenAccount: nftTokenAccount.publicKey,
+            tokenAccount: nftTokenAccount,
             owner: assetOwner.publicKey,
             tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
             assetBasket: assetBasketAddress
@@ -174,9 +181,7 @@ function getProgramInstance(connection, wallet) {
     mint_tx.feePayer = assetOwner.publicKey;
 
     mint_tx.partialSign(mintKey);
-    mint_tx.partialSign(nftTokenAccount);
     mint_tx.partialSign(assetOwner);
-
     // console.log(tx);
     // console.log(mint_tx.serialize({ requireAllSignatures: false }).toString("base64"))
     // mint_tx.partialSign(admin.payer);

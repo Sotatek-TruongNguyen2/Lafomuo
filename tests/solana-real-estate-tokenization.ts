@@ -135,7 +135,7 @@ describe("solana-real-estate-tokenization", () => {
     )
 
     const mintKey: anchor.web3.Keypair = anchor.web3.Keypair.generate();
-    const nftTokenAccount = anchor.web3.Keypair.generate();
+    const nftTokenAccount = await getAssociatedTokenAddress(mintKey.publicKey, assetOwner.publicKey);
 
     const signature = await program.provider.connection.requestAirdrop(
       assetOwner.publicKey,
@@ -173,6 +173,7 @@ describe("solana-real-estate-tokenization", () => {
         lamports,
       }),
       createInitializeMintInstruction(mintKey.publicKey, 0, assetOwner.publicKey, assetOwner.publicKey, TOKEN_PROGRAM_ID),
+      createAssociatedTokenAccountInstruction(assetOwner.publicKey, nftTokenAccount, assetOwner.publicKey, mintKey.publicKey, TOKEN_PROGRAM_ID),
     );
 
     console.log("===== Start initializing Mint and token account ====== ", program.programId.toBase58());
@@ -226,7 +227,7 @@ describe("solana-real-estate-tokenization", () => {
         mint: mintKey.publicKey,
         mintAuthority: assetOwner.publicKey,
         updateAuthority: assetOwner.publicKey,
-        tokenAccount: nftTokenAccount.publicKey,
+        tokenAccount: nftTokenAccount,
         owner: assetOwner.publicKey,
         tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
         assetBasket: assetBasketAddress
@@ -238,7 +239,7 @@ describe("solana-real-estate-tokenization", () => {
 
     mint_tx.add(ix);
 
-    await program.provider.sendAndConfirm(mint_tx, [assetOwner, nftTokenAccount, mintKey]);
+    await program.provider.sendAndConfirm(mint_tx, [assetOwner, mintKey]);
 
     const mintAccountInfo = await program.provider.connection.getParsedAccountInfo(mintKey.publicKey);
 
@@ -256,7 +257,7 @@ describe("solana-real-estate-tokenization", () => {
 
     console.log((await program.account.platformGovernor.fetch(governor.publicKey)));
 
-    const tokenAccountInfo = await program.provider.connection.getParsedAccountInfo(nftTokenAccount.publicKey);
+    const tokenAccountInfo = await program.provider.connection.getParsedAccountInfo(nftTokenAccount);
     const tokenAccountInfoData = tokenAccountInfo.value.data as any;
 
     expect(tokenAccountInfoData.parsed.info.mint).to.be.equals(mintKey.publicKey.toBase58());
@@ -300,7 +301,7 @@ describe("solana-real-estate-tokenization", () => {
       tokenProgram: TOKEN_PROGRAM_ID,
       mintNft: mintKey.publicKey,
       treasuryNftTokenAccount: treasuryNFTTokenAccount,
-      ownerNftTokenAccount: nftTokenAccount.publicKey,
+      ownerNftTokenAccount: nftTokenAccount,
       fractionalizeTokenLocker: assetLocker
     }).signers([
       // assetOwner
