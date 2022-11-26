@@ -94,10 +94,10 @@ function getProgramInstance(connection, wallet) {
 
     // All 3 accounts should be queried from our BE
     // nft token account 
-    const nftTokenAccount = new anchor.web3.PublicKey("E4Vs2bj4FHdi5RbXZsufEFHi2bz1dwuyoW4rvpKVtJj8");
-    const assetBasketAddress = new anchor.web3.PublicKey("E7JFbq8o3auKMSRU4yydxMwNajHYAetxvj8CAvQGEnhZ");
+    const nftTokenAccount = new anchor.web3.PublicKey("33ZX2U646kP2dmNzY5qHaMbbrJ2P5uxEEM1oLxvRwxNa");
+    const assetBasketAddress = new anchor.web3.PublicKey("yiaNe65WPScut5kD3Yk19zcULrj24hzdfQV9mJZ57DH");
     // nft-mint account ( nft address ) 
-    const mintKey = new anchor.web3.PublicKey("ApoRqaZB5SLB9wTZHofn7815p2uX2kqBn1mGWeeBQAF3");
+    const mintKey = new anchor.web3.PublicKey("5kKPFdx4R83YYDU8vKkPFYtPyJwwonSiLMjezG3vEv7h");
 
     const assetBasketAccount = await program.account.assetBasket.fetch(assetBasketAddress);
     const assetLocker = await getAssetLocker(program.programId, governor, assetBasketAccount.basketId);
@@ -184,12 +184,10 @@ function getProgramInstance(connection, wallet) {
     // // const log = tx_details.meta.logMessages[tx_details.meta.logMessages.length - 3].split("Program data: ")[1];
     // // const coder = new anchor.BorshEventCoder(IDL);
 
-    // // console.log(coder.decode(log));
+    // console.log(coder.decode(log));
     // const fractionalizeTokenLockerDiscriminator = Buffer.from(sha256.digest('account:FractionalizedTokenLocker')).slice(0, 8);
     // const assetBasketDiscriminator = Buffer.from(sha256.digest('account:AssetBasket')).slice(0, 8);
-    // console.log(
-    //     await program.provider.connection.getProgramAccounts(new anchor.web3.PublicKey(PROGRAM_ID))
-    // );
+
     // const assetBasketAccounts = await connection.getProgramAccounts(new anchor.web3.PublicKey(PROGRAM_ID), {
     //     filters: [
     //         { memcmp: { offset: 0, bytes: bs58.encode(assetBasketDiscriminator) } }, // Ensure it's a CandyMachine account.

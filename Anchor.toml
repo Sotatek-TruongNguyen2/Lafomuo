@@ -11,7 +11,7 @@ solana_real_estate_tokenization = "2bUX9z3VgNm8yYzqxBMS1Fto3L5r7dkWTUp85ukciBcg"
 url = "https://rpc.ankr.com/solana_devnet"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "/Users/sotatek/my-solana-wallet/my-keypair.json"
 
 [scripts]
