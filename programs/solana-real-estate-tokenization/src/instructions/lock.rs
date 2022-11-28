@@ -1,7 +1,9 @@
+use crate::errors::LandLordErrors;
 use crate::state::fractional_token_escrow::FractionalTokenEscrow;
 use crate::state::fractionalized_token_locker::FractionalizedTokenLocker;
 use crate::utils::{spl_token_transfer, TokenTransferParams};
 use crate::events::LockEvent;
+use crate::landlord_emit;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
@@ -24,10 +26,16 @@ pub fn process_escrow_lock(ctx: Context<Lock>, amount: u64) -> Result<()> {
         })?;
     }
 
+    let clock: Clock = Clock::get().unwrap();
+
+    if locker.lock_end_time < clock.unix_timestamp {
+        return Err(LandLordErrors::DistributionEndTimePassed.into());
+    }
+
     escrow.locked_amount = escrow.locked_amount.checked_add(amount).unwrap();
     locker.locked_supply = locker.locked_supply.checked_add(amount).unwrap();
 
-    emit!(LockEvent {
+    landlord_emit!(LockEvent {
         locker: locker.key(),
         locker_supply: locker.locked_supply,
         escrow_owner: escrow.owner,
@@ -52,9 +60,9 @@ pub struct Lock<'info> {
     /// Token account held by the [Escrow].
     #[account(
         mut,
-        constraint = escrow.hodl == escrow_token_hodl.key()
+        constraint = escrow.hodl == escrow_token_hodl.key() @LandLordErrors::DistributionEndTimePassed
     )]
-    pub escrow_token_hodl: Account<'info, TokenAccount>,
+    pub escrow_token_hodl: Box<Account<'info, TokenAccount>>,
 
     /// Authority of the [Escrow] and [Self::source_tokens].
     pub escrow_owner: Signer<'info>,

@@ -13,9 +13,12 @@ pub enum LandLordErrors {
     TokenAccountOwnerMismatched,
     TokenTransferFailed,
     PublicKeyMismatch,
+    PublicKeyDidMatch,
     NotEnoughTokens,
     NotEnoughSOL,
     MintingAmountCantBeZero,
+    #[msg("Distribution end time is already passed!")]
+    DistributionEndTimePassed,
     DividendCheckpointCantBeZero,
     ImmutableGovernor,
     GovernorMismatch,
@@ -34,5 +37,5 @@ pub enum LandLordErrors {
     InvalidReserveFactorForSetting,
     MinReserveFactorGreaterThanMax,
     ReserveFactorMoreThanBasisPoint,
-    SettingAccountMismatched
+    SettingAccountMismatched,
 }

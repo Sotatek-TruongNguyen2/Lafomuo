@@ -8,14 +8,15 @@ import {
   TOKEN_PROGRAM_ID,
   MINT_SIZE,
   createMintToInstruction,
+  createTransferInstruction,
 } from "@solana/spl-token";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { Metadata } from "@metaplex-foundation/mpl-token-metadata";
 import { expect } from "chai";
 import { bufferToArray } from "./utils";
-import { keccak_256 } from "js-sha3";
-import { MerkleTree } from 'merkletreejs';
-// import IDL from '../target/idl/solana_real_estate_tokenization.json';
+// import { keccak_256 } from "js-sha3";
+// import { MerkleTree } from 'merkletreejs';
+import IDL from '../target/idl/solana_real_estate_tokenization.json';
 // import tou8 from 'buffer-to-uint8array';
 
 type Keypair = anchor.web3.Keypair;
@@ -52,9 +53,20 @@ describe("solana-real-estate-tokenization", () => {
     return treasuryPubkey;
   };
 
-  const getAssetLocker = async (programId: anchor.web3.PublicKey, governor: anchor.web3.PublicKey, basket_id: anchor.BN): Promise<anchor.web3.PublicKey> => {
+
+
+  const getCheckpointEscrow = async (programId: anchor.web3.PublicKey, locker: anchor.web3.PublicKey, escrow_owner: anchor.web3.PublicKey): Promise<anchor.web3.PublicKey> => {
+    const [escrowPubkey, _] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from("escrow"), locker.toBuffer(), escrow_owner.toBuffer()],
+      programId
+    );
+
+    return escrowPubkey;
+  };
+
+  const getAssetLocker = async (programId: anchor.web3.PublicKey, governor: anchor.web3.PublicKey, total_distribution_checkpoint: anchor.BN, basket_id: anchor.BN): Promise<anchor.web3.PublicKey> => {
     const [assetLockerPubkey, _] = await anchor.web3.PublicKey.findProgramAddress(
-      [Buffer.from("locker"), governor.toBuffer(), basket_id.toArrayLike(Buffer)],
+      [Buffer.from("locker"), governor.toBuffer(), total_distribution_checkpoint.toArrayLike(Buffer), basket_id.toArrayLike(Buffer)],
       programId
     );
 
@@ -106,7 +118,6 @@ describe("solana-real-estate-tokenization", () => {
 
   let assetOwner: Keypair;
   let fst_authority: Keypair;
-  let sec_authority: Keypair;
   let governor: Keypair;
   let sol_treasury: Keypair;
   let setting: Keypair;
@@ -126,7 +137,6 @@ describe("solana-real-estate-tokenization", () => {
     governor = anchor.web3.Keypair.generate();
     assetOwner = anchor.web3.Keypair.generate();
     fst_authority = anchor.web3.Keypair.generate();
-    sec_authority = anchor.web3.Keypair.generate();
 
     console.log(
       setting.publicKey.toBase58(),
@@ -157,13 +167,7 @@ describe("solana-real-estate-tokenization", () => {
     console.log("====== AIRDROP SUCCESSFUL! ======");
 
     const lamports: number = await program.provider.connection.getMinimumBalanceForRentExemption(MINT_SIZE);
-    console.log({
-      fromPubkey: assetOwner.publicKey,
-      newAccountPubkey: mintKey.publicKey,
-      space: MINT_SIZE,
-      programId: TOKEN_PROGRAM_ID,
-      lamports,
-    })
+
     const mint_tx = new anchor.web3.Transaction().add(
       anchor.web3.SystemProgram.createAccount({
         fromPubkey: assetOwner.publicKey,
@@ -178,7 +182,14 @@ describe("solana-real-estate-tokenization", () => {
 
     console.log("===== Start initializing Mint and token account ====== ", program.programId.toBase58());
 
-    await program.methods.setupPlatform("LANDLORD", new anchor.BN(anchor.web3.LAMPORTS_PER_SOL), MIN_RESERVE_FACTOR, MAX_RESERVE_FACTOR)
+    await program.methods.setupPlatform(
+      "LANDLORD",
+      new anchor.BN(0),
+      new anchor.BN(5),
+      new anchor.BN(anchor.web3.LAMPORTS_PER_SOL),
+      MIN_RESERVE_FACTOR,
+      MAX_RESERVE_FACTOR
+    )
       .accounts({
         bigGuardian: program.provider.publicKey,
         governor: governor.publicKey,
@@ -211,7 +222,7 @@ describe("solana-real-estate-tokenization", () => {
       governor.publicKey,
       assetOwner.publicKey,
       mintKey.publicKey,
-      new anchor.BN(1)
+      new anchor.BN(0)
     );
 
     const ix = await program.methods.issueAsset("https://basc.s3.amazonaws.com/meta/3506.json", "Bored Apes").accounts(
@@ -230,7 +241,7 @@ describe("solana-real-estate-tokenization", () => {
         tokenAccount: nftTokenAccount,
         owner: assetOwner.publicKey,
         tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-        assetBasket: assetBasketAddress
+        assetBasket: assetBasketAddress,
       }
     ).signers([
       // nftTokenAccount,
@@ -239,7 +250,9 @@ describe("solana-real-estate-tokenization", () => {
 
     mint_tx.add(ix);
 
-    await program.provider.sendAndConfirm(mint_tx, [assetOwner, mintKey]);
+    await program.provider.sendAndConfirm(mint_tx, [assetOwner, mintKey], {
+      commitment: "confirmed"
+    });
 
     const mintAccountInfo = await program.provider.connection.getParsedAccountInfo(mintKey.publicKey);
 
@@ -255,7 +268,7 @@ describe("solana-real-estate-tokenization", () => {
     expect(metadataInfo.updateAuthority.toBase58()).to.be.equals(assetOwner.publicKey.toBase58());
     expect(metadataInfo.mint.toBase58()).to.be.equals(mintKey.publicKey.toBase58());
 
-    console.log((await program.account.platformGovernor.fetch(governor.publicKey)));
+    // console.log((await program.account.platformGovernor.fetch(governor.publicKey)));
 
     const tokenAccountInfo = await program.provider.connection.getParsedAccountInfo(nftTokenAccount);
     const tokenAccountInfoData = tokenAccountInfo.value.data as any;
@@ -264,15 +277,15 @@ describe("solana-real-estate-tokenization", () => {
     expect(tokenAccountInfoData.parsed.info.owner).to.be.equals(assetOwner.publicKey.toBase58());
     expect(tokenAccountInfoData.parsed.info.tokenAmount.amount).to.be.equals("1");
 
-    // ================= Fractionalize NFT ====================
+    //   // ================= Fractionalize NFT ====================
 
     const fractionalTokenMint = anchor.web3.Keypair.generate();
     const fractionalTokenAccount = await getAssociatedTokenAddress(fractionalTokenMint.publicKey, assetOwner.publicKey);
 
     const assetBasketAccount = await program.account.assetBasket.fetch(assetBasketAddress);
-    const assetLocker = await getAssetLocker(program.programId, governor.publicKey, assetBasketAccount.basketId);
     const treasuryPDA = await getTokenTreasury(program.programId);
     const treasuryNFTTokenAccount = await getAssociatedTokenAddress(mintKey.publicKey, treasuryPDA, true);
+    const adminTokenAccount = await getAssociatedTokenAddress(fractionalTokenMint.publicKey, program.provider.publicKey);
 
     const fractional_nft_tx = new anchor.web3.Transaction().add(
       anchor.web3.SystemProgram.createAccount({
@@ -301,50 +314,64 @@ describe("solana-real-estate-tokenization", () => {
       tokenProgram: TOKEN_PROGRAM_ID,
       mintNft: mintKey.publicKey,
       treasuryNftTokenAccount: treasuryNFTTokenAccount,
-      ownerNftTokenAccount: nftTokenAccount,
-      fractionalizeTokenLocker: assetLocker
+      ownerNftTokenAccount: nftTokenAccount
     }).signers([
       // assetOwner
     ]).instruction();
 
     fractional_nft_tx.add(fractionalize_nft_ix);
 
+    // for testing purpose only
+    fractional_nft_tx.add(
+      createAssociatedTokenAccountInstruction(assetOwner.publicKey, adminTokenAccount, program.provider.publicKey, fractionalTokenMint.publicKey),
+      createTransferInstruction(
+        fractionalTokenAccount,
+        adminTokenAccount,
+        assetOwner.publicKey,
+        100 * (10 ** 8)
+      )
+    )
+
     await program.provider.sendAndConfirm(fractional_nft_tx, [assetOwner, fractionalTokenMint]);
+
 
     console.log("Finish fractional !!!!");
 
-    const DIVIDEND_AIRDROP = [
-      {
-        dividend_distributor: dividend_distributor.publicKey,
-        claimer: fst_authority.publicKey,
-        amount: new anchor.BN(10 * (10 ** 8))
-      },
-      {
-        dividend_distributor: dividend_distributor.publicKey,
-        claimer: sec_authority.publicKey,
-        amount: new anchor.BN(100 * (10 ** 8))
-      },
-    ];
+    //   const DIVIDEND_AIRDROP = [
+    //     {
+    //       dividend_distributor: dividend_distributor.publicKey,
+    //       claimer: fst_authority.publicKey,
+    //       amount: new anchor.BN(10 * (10 ** 8))
+    //     },
+    //     {
+    //       dividend_distributor: dividend_distributor.publicKey,
+    //       claimer: sec_authority.publicKey,
+    //       amount: new anchor.BN(100 * (10 ** 8))
+    //     },
+    //   ];
 
-    let dividendHashes = [];
+    //   let dividendHashes = [];
 
-    for (let dividend of DIVIDEND_AIRDROP) {
-      let bufferOfDividendClaimData = Buffer.concat([
-        // bufferOfDividendClaimData,
-        dividend.dividend_distributor.toBuffer(),
-        dividend.claimer.toBuffer(),
-        dividend.amount.toBuffer("le", 8),
-      ])
+    //   for (let dividend of DIVIDEND_AIRDROP) {
+    //     let bufferOfDividendClaimData = Buffer.concat([
+    //       // bufferOfDividendClaimData,
+    //       dividend.dividend_distributor.toBuffer(),
+    //       dividend.claimer.toBuffer(),
+    //       dividend.amount.toBuffer("le", 8),
+    //     ])
 
-      dividendHashes.push(Buffer.from(keccak_256.digest(bufferOfDividendClaimData)).toString("hex"));
-    }
+    //     dividendHashes.push(Buffer.from(keccak_256.digest(bufferOfDividendClaimData)).toString("hex"));
+    //   }
 
-    const tree = new MerkleTree(dividendHashes, keccak_256, { sort: true });
-    const root = bufferToArray(tree.getRoot());
+    //   const tree = new MerkleTree(dividendHashes, keccak_256, { sort: true });
+    //   const root = bufferToArray(tree.getRoot());
+
+    const assetBasket = await program.account.assetBasket.fetch(assetBasketAddress);
+    const assetLocker = await getAssetLocker(program.programId, governor.publicKey, assetBasket.totalDistributionCheckpoint, assetBasketAccount.basketId);
 
     const assetOwnerPaymentAccount = await getAssociatedTokenAddress(paymentToken.publicKey, assetOwner.publicKey);
     const treasuryPaymentAccount = await getAssociatedTokenAddress(paymentToken.publicKey, treasuryPDA, true);
-    const fstAuthorityPaymentAccount = await getAssociatedTokenAddress(paymentToken.publicKey, fst_authority.publicKey);
+    const adminPaymentAccount = await getAssociatedTokenAddress(paymentToken.publicKey, program.provider.publicKey);
 
     const mint_payment_token_tx = new anchor.web3.Transaction().add(
       anchor.web3.SystemProgram.createAccount({
@@ -357,15 +384,15 @@ describe("solana-real-estate-tokenization", () => {
       createInitializeMintInstruction(paymentToken.publicKey, 8, assetOwner.publicKey, assetOwner.publicKey, TOKEN_PROGRAM_ID),
       createAssociatedTokenAccountInstruction(assetOwner.publicKey, treasuryPaymentAccount, treasuryPDA, paymentToken.publicKey),
       createAssociatedTokenAccountInstruction(assetOwner.publicKey, assetOwnerPaymentAccount, assetOwner.publicKey, paymentToken.publicKey),
-      createAssociatedTokenAccountInstruction(assetOwner.publicKey, fstAuthorityPaymentAccount, fst_authority.publicKey, paymentToken.publicKey),
+      createAssociatedTokenAccountInstruction(assetOwner.publicKey, adminPaymentAccount, program.provider.publicKey, paymentToken.publicKey),
       createMintToInstruction(paymentToken.publicKey, assetOwnerPaymentAccount, assetOwner.publicKey, new anchor.BN(10000 * (10 ** 8)).toNumber()),
     );
 
     await program.provider.sendAndConfirm(mint_payment_token_tx, [assetOwner, paymentToken]);
 
     const tx = await program.methods.createDividendCheckpoint(
-      root,
-      new anchor.BN(1000 * (10 ** 8)),
+      // root,
+      new anchor.BN(1000 * (10 ** 8))
     ).accounts({
       dividendDistributor: dividend_distributor.publicKey,
       governor: governor.publicKey,
@@ -376,7 +403,10 @@ describe("solana-real-estate-tokenization", () => {
       treasuryTokenAccount: treasuryPaymentAccount,
       systemProgram: anchor.web3.SystemProgram.programId,
       tokenProgram: TOKEN_PROGRAM_ID,
-      assetBasket: assetBasketAddress
+      assetBasket: assetBasketAddress,
+      fractionalizeTokenLocker: assetLocker,
+      bigGuardian: program.provider.publicKey,
+      setting: setting.publicKey
     }).signers([
       assetOwner,
       dividend_distributor
@@ -384,57 +414,126 @@ describe("solana-real-estate-tokenization", () => {
       commitment: "confirmed"
     });
 
-    // const tx_details = await program.provider.connection.getTransaction(tx, {
-    //   commitment: "confirmed",
-    // });
+    let escrow = await getCheckpointEscrow(program.programId, assetLocker, program.provider.publicKey);
+    let escrowHodl = await getAssociatedTokenAddress(
+      fractionalTokenMint.publicKey,
+      escrow,
+      true
+    );
 
-    // console.log(tx_details);
-    // const log = tx_details.meta.logMessages[9].split("Program data: ")[1];
-    // const coder = new anchor.BorshEventCoder(IDL);
-
-    // console.log(coder.decode(log));
-
-    const dividendClaimDetails = await getDividendClaimedDetails(program.programId, dividend_distributor.publicKey, fst_authority.publicKey);
-
-    const proofs = tree.getProof(dividendHashes[0]).map(proof => {
-      return bufferToArray(proof.data);
+    // Create an escrow for a user
+    await program.methods.newEscrow().accounts({
+      escrow,
+      escrowOwner: program.provider.publicKey,
+      governor: governor.publicKey,
+      locker: assetLocker,
+      payer: program.provider.publicKey,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    }).rpc({
+      commitment: "confirmed"
     });
 
-    // console.log(((await program.provider.connection.getParsedAccountInfo(treasuryPaymentAccount)).value.data as any).parsed);
+    const escrow_account_hodl = new anchor.web3.Transaction().add(
+      createAssociatedTokenAccountInstruction(program.provider.publicKey, escrowHodl, escrow, fractionalTokenMint.publicKey),
+    );
 
-    await program.methods.claimDividendByCheckpoint(
-      new anchor.BN(10 * (10 ** 8)),
-      proofs
-    ).accounts({
+    const lock_ix = await program.methods.lock(new anchor.BN(10 * (10 ** 8))).accounts(
+      {
+        escrow,
+        escrowOwner: program.provider.publicKey,
+        locker: assetLocker,
+        escrowTokenHodl: escrowHodl,
+        sourceTokens: adminTokenAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      }
+    ).instruction();
+
+    escrow_account_hodl.add(lock_ix);
+
+    await program.provider.sendAndConfirm(escrow_account_hodl, []);
+
+    console.log("Finish Escrow");
+
+    // console.log(await program.account.dividendDistributor.fetch(dividend_distributor.publicKey))
+    
+    await new Promise((res, rej) => {
+      setTimeout(() => {
+        res(true)
+      }, 5000);
+    })
+    console.log((await program.account.dividendDistributor.fetch(dividend_distributor.publicKey)).totalDistributeAmount.toString());
+    console.log((await program.account.fractionalizedTokenLocker.fetch(assetLocker)).lockedSupply.toString());
+    
+    const dividendClaimDetails = await getDividendClaimedDetails(program.programId, dividend_distributor.publicKey, program.provider.publicKey);
+
+    await program.methods.claimDividendByCheckpoint().accounts({
       claimedDividend: dividendClaimDetails,
-      claimer: fst_authority.publicKey,
-      claimerTokenAccount: fstAuthorityPaymentAccount,
+      claimer: program.provider.publicKey,
+      claimerTokenAccount: adminPaymentAccount,
       dividendDistributor: dividend_distributor.publicKey,
       treasuryTokenAccountAuthority: treasuryPDA,
       treasuryTokenAccount: treasuryPaymentAccount,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       systemProgram: anchor.web3.SystemProgram.programId,
       tokenProgram: TOKEN_PROGRAM_ID,
-    }).signers([
-      fst_authority
-    ]).rpc();
+      escrow,
+      governor: governor.publicKey,
+      locker: assetLocker
+    }).rpc({
+      commitment: "confirmed"
+    })
 
-  //   await program.methods.claimDividendByCheckpoint(
-  //     new anchor.BN(10 * (10 ** 8)),
-  //     proofs
-  //   ).accounts({
-  //     claimedDividend: dividendClaimDetails,
-  //     claimer: fst_authority.publicKey,
-  //     claimerTokenAccount: fstAuthorityPaymentAccount,
-  //     dividendDistributor: dividend_distributor.publicKey,
-  //     treasuryTokenAccountAuthority: treasuryPDA,
-  //     treasuryTokenAccount: treasuryPaymentAccount,
-  //     rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-  //     systemProgram: anchor.web3.SystemProgram.programId,
-  //     tokenProgram: TOKEN_PROGRAM_ID,
-  //   }).signers([
-  //     fst_authority
-  //   ]).rpc();
+    // const tx_details = await program.provider.connection.getTransaction(tx, {
+    //   commitment: "confirmed",
+    // });
+
+    // console.log(tx_details);
+  
+    const coder = new anchor.BorshEventCoder(IDL);
+    console.log(coder.decode("IC9HCLDrxNgAAAAAAAAAAHEEpekmYi6fTK+E8eVsXmsqS0bqiz9k3LxXtiTznUXXawW1CXRLZbSPNLi9Bm5IN4V3Xm+9+MlR0hn34H8O2AgA6HZIFwAAAMJGg2MAAAAA"));
+
+    // console.log(coder.decode(log));
+
+
+    // const proofs = tree.getProof(dividendHashes[0]).map(proof => {
+    //   return bufferToArray(proof.data);
+    // });
+
+    //   // console.log(((await program.provider.connection.getParsedAccountInfo(treasuryPaymentAccount)).value.data as any).parsed);
+
+    //   await program.methods.claimDividendByCheckpoint(
+    //     new anchor.BN(10 * (10 ** 8)),
+    //     proofs
+    //   ).accounts({
+    //     claimedDividend: dividendClaimDetails,
+    //     claimer: fst_authority.publicKey,
+    //     claimerTokenAccount: fstAuthorityPaymentAccount,
+    //     dividendDistributor: dividend_distributor.publicKey,
+    //     treasuryTokenAccountAuthority: treasuryPDA,
+    //     treasuryTokenAccount: treasuryPaymentAccount,
+    //     rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+    //     systemProgram: anchor.web3.SystemProgram.programId,
+    //     tokenProgram: TOKEN_PROGRAM_ID,
+    //   }).signers([
+    //     fst_authority
+    //   ]).rpc();
+
+    // //   await program.methods.claimDividendByCheckpoint(
+    // //     new anchor.BN(10 * (10 ** 8)),
+    // //     proofs
+    // //   ).accounts({
+    // //     claimedDividend: dividendClaimDetails,
+    // //     claimer: fst_authority.publicKey,
+    // //     claimerTokenAccount: fstAuthorityPaymentAccount,
+    // //     dividendDistributor: dividend_distributor.publicKey,
+    // //     treasuryTokenAccountAuthority: treasuryPDA,
+    // //     treasuryTokenAccount: treasuryPaymentAccount,
+    // //     rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+    // //     systemProgram: anchor.web3.SystemProgram.programId,
+    // //     tokenProgram: TOKEN_PROGRAM_ID,
+    // //   }).signers([
+    // //     fst_authority
+    // //   ]).rpc();
   });
 });
 

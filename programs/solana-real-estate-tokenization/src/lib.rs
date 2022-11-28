@@ -5,12 +5,13 @@ pub mod errors;
 pub mod events;
 pub mod constants;
 pub mod utils;
-pub mod merkle_proof;
+// pub mod merkle_proof;
+pub mod macros;
 
 use anchor_lang::prelude::*;
 use instructions::*;
 
-declare_id!("2bUX9z3VgNm8yYzqxBMS1Fto3L5r7dkWTUp85ukciBcg");
+declare_id!("7RLLimHKvGkFGZSiVipaBDYGZNKGCve9twDHfdsBDsN9");
 
 #[program]
 pub mod solana_real_estate_tokenization {
@@ -19,11 +20,13 @@ pub mod solana_real_estate_tokenization {
     pub fn setup_platform(
         ctx: Context<SetupPlatformGovernor>,
         symbol: String,
+        escrow_lock_duration: i64,
+        pre_lock_before_distribution: i64,
         minting_protocol_price: u64, 
         min_reserve_factor: u16,
         max_reserve_factor: u16
     ) -> Result<()> {
-        setup_platform_governor(ctx, symbol, minting_protocol_price, min_reserve_factor, max_reserve_factor)?;
+        setup_platform_governor(ctx, symbol, escrow_lock_duration, pre_lock_before_distribution, minting_protocol_price, min_reserve_factor, max_reserve_factor)?;
         Ok(())
     }
 
@@ -46,19 +49,20 @@ pub mod solana_real_estate_tokenization {
 
     pub fn create_dividend_checkpoint(
         ctx: Context<CreateDividendCheckpoint>,
-        root: [u8; 32],
+        // root: [u8; 32],
         total_distribution_amount: u64
     ) -> Result<()> {
-        process_create_dividend_distribution_checkpoint(ctx, root, total_distribution_amount)?;
+        // process_create_dividend_distribution_checkpoint(ctx, root, total_distribution_amount)?;
+        process_create_dividend_distribution_checkpoint(ctx, total_distribution_amount)?;
         Ok(())
     }
 
     pub fn claim_dividend_by_checkpoint(
         ctx: Context<ClaimDividendCheckpoint>,
-        amount: u64,
-        proof: Vec<[u8; 32]>
+        // amount: u64,
+        // proof: Vec<[u8; 32]>
     ) -> Result<()> {
-        process_claim_dividend(ctx, amount, proof)?;
+        process_claim_dividend(ctx)?;
         Ok(())
     }
 

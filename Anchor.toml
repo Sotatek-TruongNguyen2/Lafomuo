@@ -3,15 +3,15 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-solana_real_estate_tokenization = "2bUX9z3VgNm8yYzqxBMS1Fto3L5r7dkWTUp85ukciBcg"
+solana_real_estate_tokenization = "7RLLimHKvGkFGZSiVipaBDYGZNKGCve9twDHfdsBDsN9"
 [programs.devnet]
-solana_real_estate_tokenization = "2bUX9z3VgNm8yYzqxBMS1Fto3L5r7dkWTUp85ukciBcg"
+solana_real_estate_tokenization = "7RLLimHKvGkFGZSiVipaBDYGZNKGCve9twDHfdsBDsN9"
 
 [registry]
 url = "https://rpc.ankr.com/solana_devnet"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "/Users/sotatek/my-solana-wallet/my-keypair.json"
 
 [scripts]

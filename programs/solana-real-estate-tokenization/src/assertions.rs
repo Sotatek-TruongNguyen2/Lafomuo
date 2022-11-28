@@ -55,3 +55,11 @@ pub fn assert_keys_equal(key1: &Pubkey, key2: &Pubkey) -> Result<(), LandLordErr
         Ok(())
     }
 }
+
+pub fn assert_keys_not_equal(key1: &Pubkey, key2: &Pubkey) -> Result<(), LandLordErrors> {
+    if cmp_pubkeys(key1, key2) {
+        return Err(LandLordErrors::PublicKeyDidMatch)
+    } else {
+        Ok(())
+    }
+}

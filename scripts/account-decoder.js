@@ -1,8 +1,6 @@
 const IDL = require("../target/idl/solana_real_estate_tokenization.json");// directory of copy/paste types/your_program.ts file
 const anchor = require('@project-serum/anchor');
 
-const PROGRAM_ID = "2bUX9z3VgNm8yYzqxBMS1Fto3L5r7dkWTUp85ukciBcg";
-
 function getProgramInstance(connection, wallet) {
     if (!wallet.publicKey) return;
     const provider = new anchor.AnchorProvider(
@@ -26,11 +24,14 @@ function getProgramInstance(connection, wallet) {
 
     const txs = [];
 
+    let governor = new anchor.web3.PublicKey("5wBbT46X1G7kAL49wahJspTqruVo8KB5NdhvY925KgiC");
+
     let lastTransactions = await connection.getConfirmedSignaturesForAddress2(
-        new anchor.web3.PublicKey(PROGRAM_ID),
+        governor,
         {
             limit: 1
-        }
+        },
+        "finalized"
     );
 
     
@@ -39,7 +40,7 @@ function getProgramInstance(connection, wallet) {
 
     while (true) {
         lastTransactions = await connection.getConfirmedSignaturesForAddress2(
-            new anchor.web3.PublicKey(PROGRAM_ID),
+            governor,
             {
                 limit: 5,
                 before
@@ -56,14 +57,17 @@ function getProgramInstance(connection, wallet) {
         break;
     }
 
+    console.log(txs);
+
     let signatureList = txs.map(tx => tx.signature);
-    let transactionDetails = await connection.getParsedTransactions(signatureList, {maxSupportedTransactionVersion:0});
+    let transactionDetails = await connection.getParsedTransactions(signatureList, {
+        maxSupportedTransactionVersion: 0,
+    });
 
     let logs = transactionDetails.map((txDetail, n)=>{
         let logMessages = txDetail.meta.logMessages;
-        return logMessages.filter(value => /^Program data:/.test(value)).map(log => {
-            return coder.decode(log.split("Program data: ")[1]);
-        });
+        console.log(logMessages);
+        return coder.decode(logMessages[logMessages.findIndex(value => /^Program log: landlord-log/.test(value)) + 1].split("Program log: ")[1]);
     })
 
     console.log(logs);

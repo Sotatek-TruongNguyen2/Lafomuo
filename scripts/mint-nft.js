@@ -7,7 +7,7 @@ const {
     TOKEN_PROGRAM_ID,
     MINT_SIZE,
 } = require("@solana/spl-token");
-const PROGRAM_ID = "2bUX9z3VgNm8yYzqxBMS1Fto3L5r7dkWTUp85ukciBcg";
+const PROGRAM_ID = "7RLLimHKvGkFGZSiVipaBDYGZNKGCve9twDHfdsBDsN9";
 const bs58 = require('bs58');
 
 const TOKEN_METADATA_PROGRAM_ID = new anchor.web3.PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
@@ -80,8 +80,8 @@ function getProgramInstance(connection, wallet) {
     )
 
     // sol_treasury, governor: Provided by admin
-    let sol_treasury = new anchor.web3.PublicKey("8zhub8g59f2hyn2VKyho1mvUbY1vXkTZFHkFWibLEz8q");
-    let governor = new anchor.web3.PublicKey("5MvPJqs6MVymt6XjUUHPdwVnD7yCMntTHzTHbUrYj5VL");
+    let sol_treasury = new anchor.web3.PublicKey("BDpfTocM9tY6kZXGo8rdk7PnizhcYsCjGwyfag2zB6cL");
+    let governor = new anchor.web3.PublicKey("5S6pBPEMspXFbdQ46vBhrd5MmUorccYPFSkJn4hoyL8Y");
 
     // Must be by FE
     const mintKey = anchor.web3.Keypair.generate();
@@ -131,7 +131,7 @@ function getProgramInstance(connection, wallet) {
         governor,
         assetOwner.publicKey,
         mintKey.publicKey,
-        governorDetails.totalAssetsMinted.add(new anchor.BN(1))
+        governorDetails.totalAssetsMinted
     );
 
     console.log(

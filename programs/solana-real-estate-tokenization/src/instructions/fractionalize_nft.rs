@@ -8,9 +8,8 @@ use arrayref::{array_ref, array_refs};
 use crate::assertions::assert_is_ata;
 use crate::constants::TOKEN_TREASURY_AUTHORITY_PDA_SEED;
 use crate::errors::LandLordErrors;
-use crate::events::{NewLockerEvent, AssetFractionalize};
+use crate::events::{AssetFractionalize};
 use crate::state::asset_basket::AssetBasket;
-use crate::state::fractionalized_token_locker::FractionalizedTokenLocker;
 use crate::state::platform_governor::PlatformGovernor;
 use crate::utils::{spl_token_transfer, TokenTransferParams};
 use crate::{landlord_emit, ID};
@@ -36,27 +35,20 @@ pub fn process_fractionalize_asset(
         &mint_nft.key(),
     )?;
 
-    let fractionalize_token_locker = &mut ctx.accounts.fractionalize_token_locker;
-    fractionalize_token_locker.bump = *ctx.bumps.get("fractionalize_token_locker").unwrap();
-    fractionalize_token_locker.base = ctx.accounts.owner.key();
-    fractionalize_token_locker.governor = ctx.accounts.governor.key();
-    fractionalize_token_locker.locked_supply = 0;
-    fractionalize_token_locker.basket_id = ctx.accounts.asset_basket.basket_id;
-
-    landlord_emit!(NewLockerEvent {
-        governor: ctx.accounts.governor.key(),
-        locker: fractionalize_token_locker.key(),
-        token_mint: mint_nft.key(),
-        asset_id: ctx.accounts.asset_basket.asset_id,
-        basket_id: ctx.accounts.asset_basket.basket_id
-    });
-
     let asset_basket = &mut ctx.accounts.asset_basket;
 
     asset_basket.fractionalize(total_supply, mint)?;
 
     let big_guardian = &ctx.accounts.big_guardian;
     let big_guardian_account_info = big_guardian.to_account_info();
+
+    landlord_emit!(AssetFractionalize {
+        mint: mint.key(), // dia chi token fractionalize
+        governor: ctx.accounts.governor.key(), // 
+        asset_basket: ctx.accounts.asset_basket.key(), // asset-basket
+        total_supply, // total - supply
+        owner: ctx.accounts.owner.key() // dia chi th fractionlaize
+    });
 
     mint_token(&ctx, total_supply)?;
 
@@ -76,13 +68,6 @@ pub fn process_fractionalize_asset(
         token_program: ctx.accounts.token_program.to_account_info(),
         amount: 1,
     })?;
-
-    landlord_emit!(AssetFractionalize {
-        mint: mint.key(),
-        governor: ctx.accounts.governor.key(),
-        asset_basket: ctx.accounts.asset_basket.key(),
-        total_supply
-    });
 
     Ok(())
 }
@@ -186,20 +171,6 @@ pub struct FractionalizeNFT<'info> {
     pub owner: Signer<'info>,
     // Must be signed by big guardian to authorize asset issuing
     pub big_guardian: Signer<'info>,
-
-    /// [Locker].
-    #[account(
-        init,
-        seeds = [
-            b"locker",
-            governor.key().as_ref(),
-            [asset_basket.basket_id as u8].as_ref()
-        ],
-        bump,
-        payer = owner,
-        space = FractionalizedTokenLocker::LEN
-    )]
-    pub fractionalize_token_locker: Box<Account<'info, FractionalizedTokenLocker>>,
 
     #[account(
         mut,

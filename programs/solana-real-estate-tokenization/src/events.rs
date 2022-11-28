@@ -19,18 +19,18 @@ macro_rules! landlord_emit {
 ///
 /// Warning: This stores intermediate results on the stack, which must have 2*N+ free bytes.
 /// This function will panic if the generated event does not fit the buffer of size N.
-pub fn mango_emit_stack<T: AnchorSerialize + Discriminator, const N: usize>(event: T) {
+pub fn landlord_emit_stack<T: AnchorSerialize + Discriminator, const N: usize>(event: T) {
     let mut data_buf = [0u8; N];
     let mut out_buf = [0u8; N];
 
-    mango_emit_buffers(event, &mut data_buf[..], &mut out_buf[..])
+    landlord_emit_buffers(event, &mut data_buf[..], &mut out_buf[..])
 }
 
 /// Log to Program Log with a prologue so transaction scraper knows following line is valid mango log
 ///
 /// This function will write intermediate data to data_buf and out_buf. The buffers must be
 /// large enough to hold this data, or the function will panic.
-pub fn mango_emit_buffers<T: AnchorSerialize + Discriminator>(
+pub fn landlord_emit_buffers<T: AnchorSerialize + Discriminator>(
     event: T,
     data_buf: &mut [u8],
     out_buf: &mut [u8],
@@ -60,17 +60,21 @@ pub struct AssetIssuance {
     pub owner: Pubkey,
     pub asset_id: Pubkey,
     pub asset_token_account: Pubkey,
-    pub owner_pda: Pubkey,
+    pub asset_basket: Pubkey,
     pub master_edition: Pubkey,
     pub metadata: Pubkey,
-    pub iat: i64
+    pub iat: i64,
+    pub basket_id: u64
 }
 
 #[event]
 pub struct AssetFractionalize {
+    #[index]
     pub asset_basket: Pubkey,
+    #[index]
     pub governor: Pubkey,
     pub mint: Pubkey,
+    pub owner: Pubkey,
     pub total_supply: u64,
 }
 
@@ -78,9 +82,11 @@ pub struct AssetFractionalize {
 pub struct DistributionCreated {
     pub checkpoint_id: u64,
     pub distributor: Pubkey,
+    pub locker: Pubkey,
     pub owner: Pubkey,
-    pub root: String,
-    pub total_distribution_amount: u64
+    // pub root: String,
+    pub total_distribution_amount: u64,
+    pub start_distribution_at: i64
 }
 
 #[event]
@@ -90,15 +96,6 @@ pub struct DividendClaimed {
     pub owner: Pubkey,
     pub total_claimed: u64,
     pub last_claimed_at: i64
-}
-
-#[event]
-pub struct NewLockerEvent {
-    pub governor: Pubkey,
-    pub locker: Pubkey,
-    pub token_mint: Pubkey,
-    pub asset_id: Pubkey,
-    pub basket_id: u64
 }
 
 #[event]
@@ -132,3 +129,20 @@ pub struct LockEvent {
     /// Amount of tokens locked inside the [Locker].
     pub locker_supply: u64,
 }
+
+#[event]
+/// Event called in [locked_voter::exit].
+pub struct ExitEscrowEvent {
+    /// The owner of the [Escrow].
+    #[index]
+    pub escrow_owner: Pubkey,
+    /// The locker for the [Escrow].
+    #[index]
+    pub locker: Pubkey,
+    /// Timestamp for the event.
+    pub timestamp: i64,
+    /// The amount of tokens locked inside the [Locker].
+    pub locker_supply: u64,
+    /// The amount released from the [Escrow].
+    pub released_amount: u64,
+}   

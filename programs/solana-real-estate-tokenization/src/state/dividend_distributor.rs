@@ -1,10 +1,11 @@
 use anchor_lang::prelude::*;
-use crate::constants::*;
+use crate::{constants::*};
 
 #[account]
 pub struct DividendDistributor {
     pub id: u64,
-    pub root: [u8; 32],
+    // pub root: [u8; 32],
+    pub governor: Pubkey,
     pub owner: Pubkey,
     pub token_mint: Pubkey,
     pub total_distribute_amount: u64,
@@ -17,6 +18,7 @@ impl DividendDistributor {
         DISCRIMINATOR_LENGTH + // Discriminator
         U128_LENGTH / 2 + // ID 
         U128_LENGTH * 2 + // Root
+        PUBLIC_KEY_LENGTH + // governor,
         PUBLIC_KEY_LENGTH +  // Owner
         PUBLIC_KEY_LENGTH + // Token mint
         U128_LENGTH +   // Total_distribute_amount - Total_claimed
@@ -25,13 +27,13 @@ impl DividendDistributor {
     pub fn init(
         &mut self,
         id: u64,
-        root: [u8; 32],
+        governor: Pubkey,
         owner: Pubkey,
         mint: Pubkey,
-        total_distribute_amount: u64,
+        total_distribute_amount: u64
     ) -> Result<()> {
         self.id = id;
-        self.root = root;
+        self.governor = governor;
         self.owner = owner;
         self.token_mint = mint;
         self.total_claimed = 0;

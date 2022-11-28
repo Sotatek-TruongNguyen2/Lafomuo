@@ -4,6 +4,7 @@ use crate::landlord_emit;
 use crate::state::fractional_token_escrow::FractionalTokenEscrow;
 use crate::state::fractionalized_token_locker::FractionalizedTokenLocker;
 use crate::events::NewEscrowEvent;
+use crate::state::platform_governor::PlatformGovernor;
 
 pub fn process_new_escrow(ctx: Context<NewEscrow>) -> Result<()> {
     let escrow = &mut ctx.accounts.escrow;
@@ -32,7 +33,12 @@ pub fn process_new_escrow(ctx: Context<NewEscrow>) -> Result<()> {
 #[derive(Accounts)]
 pub struct NewEscrow<'info> {
     /// [Locker].
+    #[account(
+        has_one = governor
+    )]
     pub locker: Account<'info, FractionalizedTokenLocker>,
+
+    pub governor: Account<'info, PlatformGovernor>,
 
     /// [Escrow].
     #[account(

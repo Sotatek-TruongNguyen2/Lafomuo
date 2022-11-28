@@ -1,7 +1,7 @@
 const IDL = require("../target/idl/solana_real_estate_tokenization.json");// directory of copy/paste types/your_program.ts file
 const anchor = require('@project-serum/anchor');
 
-const PROGRAM_ID = "2bUX9z3VgNm8yYzqxBMS1Fto3L5r7dkWTUp85ukciBcg";
+const PROGRAM_ID = "7RLLimHKvGkFGZSiVipaBDYGZNKGCve9twDHfdsBDsN9";
 
 function getProgramInstance(connection, wallet) {
     if (!wallet.publicKey) return;
@@ -43,6 +43,8 @@ function getProgramInstance(connection, wallet) {
 
     const tx = await program.methods.setupPlatform(
         "LANDLORD", 
+        new anchor.BN(0),
+        new anchor.BN(10 * 60),
         new anchor.BN(anchor.web3.LAMPORTS_PER_SOL),
         10,
         4000

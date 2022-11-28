@@ -3,9 +3,9 @@ use anchor_lang::solana_program::{program::invoke, system_instruction};
 use anchor_spl::token::{Mint, Token, MintTo, ID as TokenProgramID};
 use mpl_token_metadata::instruction::{create_master_edition_v3, create_metadata_accounts_v2};
 
-use crate::landlord_emit;
 use crate::events::{AssetIssuance};
 use crate::errors::LandLordErrors;
+use crate::landlord_emit;
 use crate::state::asset_basket::{AssetBasket};
 use crate::state::platform_governor::PlatformGovernor;
 use crate::utils::{spl_token_transfer, TokenTransferParams};
@@ -17,12 +17,6 @@ pub fn process_issue_asset<'a>(ctx: Context<'_, '_, '_, 'a, IssueAsset<'a>>, uri
     let token_program = &ctx.accounts.token_program;
     let owner = &ctx.accounts.owner;
     let mint = &ctx.accounts.mint;
-
-    if governor.is_mutable {
-        governor.increase_total_minted(1)?;
-    } else {
-        return Err(LandLordErrors::ImmutableGovernor.into());
-    }
 
     // =====  Do asset basket initialization =====
     let asset_basket = &mut ctx.accounts.asset_basket;
@@ -75,15 +69,22 @@ pub fn process_issue_asset<'a>(ctx: Context<'_, '_, '_, 'a, IssueAsset<'a>>, uri
 
     landlord_emit!(
         AssetIssuance {
+            basket_id: governor.total_assets_minted,
             asset_id: mint.key(),
             owner: owner.key(),
-            owner_pda: asset_basket.key(),
+            asset_basket: asset_basket.key(),
             iat: asset_basket.iat,
             master_edition: ctx.accounts.master_edition.key(),
             metadata: ctx.accounts.metadata.key(),
             asset_token_account: ctx.accounts.token_account.key()
         }
     );
+
+    if governor.is_mutable {
+        governor.increase_total_minted(1)?;
+    } else {
+        return Err(LandLordErrors::ImmutableGovernor.into());
+    }
 
     msg!("Initializing mint");
     let token_mint_id = mint_token(&ctx)?;
@@ -242,7 +243,7 @@ pub struct IssueAsset<'info> {
             mint.key().as_ref(),
             owner.key().as_ref(),
             governor.key().as_ref(),
-            [(governor.total_assets_minted + 1) as u8].as_ref()
+            [governor.total_assets_minted as u8].as_ref()
         ],
         space = AssetBasket::LEN,
         bump,
