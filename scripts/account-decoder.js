@@ -64,13 +64,17 @@ function getProgramInstance(connection, wallet) {
         maxSupportedTransactionVersion: 0,
     });
 
-    let logs = transactionDetails.map((txDetail, n)=>{
-        let logMessages = txDetail.meta.logMessages;
-        console.log(logMessages);
-        return coder.decode(logMessages[logMessages.findIndex(value => /^Program log: landlord-log/.test(value)) + 1].split("Program log: ")[1]);
-    })
+    // let logs = transactionDetails.map((txDetail, n)=>{
+        // let logMessages = txDetail.meta.logMessages;
+        let transactionDetail = await connection.getParsedTransaction("2E8WDRaqhqCr6SD2JTKxxb1h18SobtBhw9PGkRaUzukteYHpEh536LrrhHmmUiVp3mYEGTnb2xFajgrzGFxmsJy7", {
+            maxSupportedTransactionVersion: 0,
+        });
+        const logMessages = transactionDetail.meta.logMessages;
+        // console.log(logMessages[logMessages.findIndex(value => /^Program data:/.test(value)) + 1].split("Program data: ")[1]));
+        console.log((coder.decode(logMessages[logMessages.findIndex(value => /^Program data:/.test(value))].split("Program data: ")[1])).data.metadata.toBase58());
+    // })
 
-    console.log(logs);
+    // console.log(logs);
 
 
     // const program = getProgramInstance(connection, wallet);

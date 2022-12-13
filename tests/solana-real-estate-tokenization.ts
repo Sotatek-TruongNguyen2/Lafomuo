@@ -273,6 +273,8 @@ describe("solana-real-estate-tokenization", () => {
     const tokenAccountInfo = await program.provider.connection.getParsedAccountInfo(nftTokenAccount);
     const tokenAccountInfoData = tokenAccountInfo.value.data as any;
 
+    console.log("tokenAccountInfoData: ", tokenAccountInfoData);
+    
     expect(tokenAccountInfoData.parsed.info.mint).to.be.equals(mintKey.publicKey.toBase58());
     expect(tokenAccountInfoData.parsed.info.owner).to.be.equals(assetOwner.publicKey.toBase58());
     expect(tokenAccountInfoData.parsed.info.tokenAmount.amount).to.be.equals("1");
